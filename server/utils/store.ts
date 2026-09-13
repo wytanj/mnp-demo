@@ -1,4 +1,4 @@
-import type { OutboxEmail, Quote, Shipment, ShipmentEvent, ShipmentStatus } from '#shared/utils/shipping'
+import type { OutboxEmail, Quote, Shipment, ShipmentEvent, ShipmentStatus, ThreadMessage } from '#shared/utils/shipping'
 import { MAIL_FROM_DISPLAY, STATUS_LABELS } from '#shared/utils/shipping'
 
 export function newId(prefix = 'MP'): string {
@@ -179,6 +179,11 @@ function minsAgo(m: number): string {
   return new Date(Date.now() - m * 60_000).toISOString()
 }
 
+/** Seed helper for simulated WhatsApp messages — fixed ids keep the seed deterministic. */
+function wa(id: string, direction: 'in' | 'out', from: string, body: string, mins: number, attachment?: ThreadMessage['attachment']): ThreadMessage {
+  return { id, direction, from, body, at: minsAgo(mins), ...(attachment ? { attachment } : {}) }
+}
+
 const SEED_SIGNATURE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="70"><path d="M15 45 C 40 12, 62 58, 92 32 S 138 18, 168 40 S 195 30, 205 36" stroke="#1a2433" fill="none" stroke-width="2.5" stroke-linecap="round"/></svg>'
 )
@@ -263,6 +268,105 @@ export const RATE_CARDS: Quote[] = [
       'Excludes insurance coverage.',
       'Transport rate assumes industrial / warehouse areas with proper unloading facilities.'
     ]
+  },
+  {
+    ref: 'QT-KR-LCL',
+    title: 'Sea Freight Import — LCL ex-Korea',
+    route: 'Busan (KRPUS) → Singapore (SGSIN)',
+    containerType: 'LCL — general cargo, palletised or loose',
+    carrier: 'LCL consolidation',
+    validUntil: '2026-09-30',
+    showSubtotals: false,
+    sections: [
+      {
+        key: 'A',
+        title: 'Ocean freight & surcharges',
+        currency: 'USD',
+        subtitle: 'Per revenue ton (RT)',
+        lines: [
+          { label: 'Ocean freight', amount: 30, unit: '/RT' },
+          { label: 'Low sulphur surcharge (LSS)', amount: 13, unit: '/RT' },
+          { label: 'Peak season surcharge (PSS)', amount: 30, unit: '/RT' }
+        ]
+      },
+      {
+        key: 'B',
+        title: 'Origin charges (Korea)',
+        currency: 'USD',
+        lines: [
+          { label: 'CFS', amount: 6.5, unit: '/RT' },
+          { label: 'THC', amount: 6.5, unit: '/RT' },
+          { label: 'Documentation (DOC)', amount: 60, unit: '/BL' },
+          { label: 'Handling (HDL)', amount: 40, unit: '/BL' },
+          { label: 'Customs clearance fee', amount: null, note: 'FOB value × 0.15%, min USD 60/shpt' }
+        ]
+      },
+      {
+        key: 'C',
+        title: 'Singapore local charges',
+        currency: 'SGD',
+        lines: [
+          { label: 'LCL charges', amount: 18, unit: '/w-m' },
+          { label: 'THC', amount: 9, unit: '/w-m' },
+          { label: 'PSA wharfage', amount: 1.75, unit: '/w-m' },
+          { label: 'Delivery order fee', amount: 180, unit: '/set' },
+          { label: 'Agency fee', amount: 60, unit: '/shipment' },
+          { label: 'Import permit', amount: 40, unit: '/set' },
+          { label: 'Clearance charges', amount: 50, unit: '/shipment' },
+          { label: 'Transportation', amount: 90, unit: '/trip', note: 'subject to GST' },
+          { label: 'Import processing fee', amount: 35, unit: '/shipment' },
+          { label: 'Tailgate', amount: 60, excluded: true, note: 'if required' },
+          { label: 'Singapore GST', amount: null, note: 'at cost, on cargo value' }
+        ]
+      }
+    ],
+    notes: [
+      'Excludes insurance coverage.',
+      'EXW rate subject to change if cargo details change.'
+    ]
+  },
+  {
+    ref: 'QT-HK-AIR',
+    title: 'Air Freight Import — ex-Hong Kong',
+    route: 'Hong Kong (HKG) → Singapore (SIN)',
+    containerType: 'Air freight — general cargo, chargeable weight',
+    carrier: 'SQ / CX consolidation',
+    validUntil: '2026-09-30',
+    showSubtotals: false,
+    sections: [
+      {
+        key: 'A',
+        title: 'Air freight & origin (Hong Kong)',
+        currency: 'USD',
+        lines: [
+          { label: 'Air freight', amount: 2.1, unit: '/kg', note: 'min 45 kg chargeable' },
+          { label: 'Fuel surcharge', amount: 0.55, unit: '/kg' },
+          { label: 'Security surcharge', amount: 0.18, unit: '/kg' },
+          { label: 'AWB / documentation fee', amount: 45, unit: '/AWB' },
+          { label: 'Origin handling', amount: 55, unit: '/shipment' },
+          { label: 'Export declaration fee', amount: null, note: 'CIF value HKD × 0.025%, min HKD 15' }
+        ]
+      },
+      {
+        key: 'B',
+        title: 'Singapore local charges',
+        currency: 'SGD',
+        lines: [
+          { label: 'Airport terminal handling', amount: 0.16, unit: '/kg', note: 'min SGD 50' },
+          { label: 'Delivery order fee', amount: 95, unit: '/set' },
+          { label: 'Agency fee', amount: 60, unit: '/shipment' },
+          { label: 'Import permit', amount: 40, unit: '/set' },
+          { label: 'Clearance charges', amount: 50, unit: '/shipment' },
+          { label: 'Transportation (Changi → your door)', amount: 110, unit: '/trip', note: 'subject to GST' },
+          { label: 'After-hours release', amount: 80, excluded: true, note: 'if required' },
+          { label: 'Singapore GST', amount: null, note: 'at cost, on cargo value' }
+        ]
+      }
+    ],
+    notes: [
+      'Excludes insurance coverage.',
+      'Chargeable weight = greater of actual weight or volumetric (÷ 6000).'
+    ]
   }
 ]
 
@@ -336,7 +440,30 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       declaredBy: 'Joreen (M&P Customs)',
       declaredAt: minsAgo(60 * 6),
       permitNo: 'IN-2026-09-044713',
-      note: 'Documents checked by M&P, declaration filed manually on TradeNet'
+      note: 'Documents checked by M&P, declaration filed manually on TradeNet',
+      declaration: {
+        declarationType: 'IN',
+        hsCode: '1108.19.00',
+        cargoValue: 38420,
+        currency: 'USD',
+        countryOfOrigin: 'KR — Republic of Korea',
+        importerUEN: '201422319R',
+        importerName: 'Allmighty Foods Pte Ltd',
+        permitType: 'IN-PAYMENT (GST)',
+        vesselName: 'SINOKOR NAGOYA',
+        voyage: '2418S',
+        blNo: 'SKRSIN-2409114',
+        containerNo: 'TEMU 482391-0',
+        portOfLoading: 'KRPUS — Busan',
+        portOfDischarge: 'SGSIN — PSA Pasir Panjang T3',
+        packages: 1,
+        grossWeightKg: 11200,
+        description: 'Konjac flour & oat fibre, food grade, bagged',
+        incoterms: 'EXW',
+        filedBy: 'Joreen (M&P Customs)',
+        filedAt: minsAgo(60 * 6),
+        permitNo: 'IN-2026-09-044713'
+      }
     },
     documents: [
       { key: 'cinv', label: 'Commercial invoice', required: true, category: 'customs', status: 'approved', fileName: 'INV-AF-2481.pdf', uploadedBy: 'Allmighty Foods', at: minsAgo(60 * 23) },
@@ -609,7 +736,24 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     customs: {
       required: true,
       status: 'docs_pending',
-      note: '2 documents outstanding before M&P can declare on TradeNet'
+      note: '2 documents outstanding before M&P can declare on TradeNet',
+      declaration: {
+        declarationType: 'IN',
+        currency: 'USD',
+        countryOfOrigin: 'HK — Hong Kong SAR',
+        importerName: 'Mecha Pte Ltd',
+        permitType: 'IN-PAYMENT (GST)',
+        vesselName: 'HONGKONG BRIDGE',
+        voyage: '0055S',
+        blNo: 'HBL-ICS-3318-0055',
+        portOfLoading: 'HKHKG — Hong Kong',
+        portOfDischarge: 'SGSIN — Keppel Distripark',
+        packages: 32,
+        grossWeightKg: 296,
+        description: 'Mechanical keyboard kits & accessories, retail packed',
+        incoterms: 'EXW'
+        // hsCode, cargoValue and importerUEN still missing — see declarationGaps()
+      }
     },
     documents: [
       { key: 'hbl', label: 'House bill of lading', required: true, category: 'customs', status: 'approved', fileName: 'HBL-ICS-draft.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 68), note: 'Checked by M&P — becomes final on vessel departure' },
@@ -901,6 +1045,293 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s10, { type: 'note', actor: 'system', note: '⏸ Review request held — open damage claim → CS/claims', internal: true, at: minsAgo(80) })
   addEvent(s10, { type: 'note', actor: 'cs', note: 'Claim acknowledged — Sarah (CS) collecting photos and carton counts for the report', at: minsAgo(70) })
 
+
+  // Scenario 11 — B2B LCL import ex-Shenzhen for Titan Associates (ex docs/sample-email-3).
+  // The sick job: ETA already passed, no movement for 30h, packing list missing,
+  // CFS blocked without the permit, and the customer is waiting on an NOA.
+  const s11: Shipment = {
+    id: 'MP-9032-TA',
+    mode: 'b2b',
+    service: 'LCL sea import + customs + delivery',
+    status: 'in_transit',
+    customerName: 'WY Tan',
+    customerEmail: 'wy.tan@titanassociates.com.sg',
+    company: 'Titan Associates Pte Ltd',
+    poNumber: 'ICS2008403',
+    incoterms: 'FOB',
+    origin: 'Cafganic Import & Export Trading Co. Ltd, Shenzhen (Yantian) CFS',
+    destination: 'Titan Associates, 8 Tai Seng Link',
+    eta: new Date(Date.now() - 6 * 3600_000).toISOString(),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: '14-ft lorry — GBC 4521 K',
+    pieces: 40,
+    weightKg: 500,
+    description: '40 pkgs wireless keyboards — 500 kg / 1.5 m³ (LCL, WAN HAI 516 V.W050)',
+    events: [],
+    customs: {
+      required: true,
+      status: 'docs_pending',
+      note: 'Packing list outstanding — TradeNet draft half keyed in, waiting on HS code, cargo value and importer UEN',
+      declaration: {
+        declarationType: 'IN',
+        importerName: 'Titan Associates Pte Ltd',
+        permitType: 'IN-PAYMENT (GST)',
+        vesselName: 'WAN HAI 516',
+        voyage: 'W050',
+        blNo: 'ICS2008403A',
+        portOfLoading: 'CNSZX — Shenzhen (Yantian)',
+        portOfDischarge: 'SGSIN — Keppel Distripark',
+        packages: 40,
+        grossWeightKg: 500,
+        description: 'Wireless keyboards, retail packed',
+        incoterms: 'FOB'
+        // hsCode, cargoValue, currency, countryOfOrigin, importerUEN still missing
+      }
+    },
+    documents: [
+      { key: 'hbl', label: 'House bill of lading', required: true, category: 'customs', status: 'approved', fileName: 'HBL-COPY-ICS2008403A.pdf', uploadedBy: 'ICS Shenzhen', verifiedBy: 'Christina (M&P CS)', at: minsAgo(60 * 58), note: 'Copy checked by M&P — final release still with ICS' },
+      { key: 'cinv', label: 'Commercial invoice', required: true, category: 'customs', status: 'approved', fileName: 'INV-CAFGANIC-2008403.pdf', uploadedBy: 'Titan Associates', verifiedBy: 'Joreen (M&P Customs)', at: minsAgo(60 * 44) },
+      { key: 'plist', label: 'Packing list', required: true, category: 'customs', status: 'pending', deadline: new Date(Date.now() + 6 * 3600_000).toISOString(), note: 'Shipper has not released it — Joreen cannot file on TradeNet without it' },
+      { key: 'gst', label: 'GST payment advice', required: true, category: 'payment', status: 'pending', note: 'GST on cash/COD term — transfer proof needed before delivery' }
+    ],
+    whatsapp: [
+      {
+        id: 'wa-9032-kelvin',
+        contactName: 'Kelvin Lau (ICS Shenzhen)',
+        contactHandle: '+852 9761 4408',
+        contactRole: 'agent',
+        status: 'waiting_on_them',
+        messages: [
+          wa('wa-9032-kelvin-1', 'out', 'M&P CS', 'Kelvin, can you release the final HBL for ICS2008403? We only have the copy on our side.', 60 * 29),
+          wa('wa-9032-kelvin-2', 'in', 'Kelvin Lau (ICS Shenzhen)', 'Checking with Shenzhen office. Shipper still holding the packing list so HBL not finalised yet.', 60 * 28),
+          wa('wa-9032-kelvin-3', 'out', 'M&P CS', 'Please chase them — cargo already discharged here and Pan-Asia CFS won\'t unstuff without the permit.', 60 * 26)
+        ]
+      }
+    ],
+    partners: [
+      { role: 'shipping_line', name: 'Wan Hai Lines', contact: 'sin.import@wanhai.example', state: 'done', since: minsAgo(60 * 30), channel: 'email' },
+      { role: 'agent', name: 'ICS / Iconsol Shipping — Kelvin Lau', contact: '+852 9761 4408', state: 'waiting', waitingFor: 'Final HBL release for ICS2008403', since: minsAgo(60 * 29), channel: 'whatsapp' },
+      { role: 'warehouse', name: 'Pan-Asia CFS, Keppel Distripark', contact: 'ops@panasiacfs.example', state: 'blocked', waitingFor: 'Cannot unstuff without the import permit — slot given away this morning', since: minsAgo(60 * 20), channel: 'email' },
+      { role: 'broker', name: 'Joreen (M&P Customs)', contact: 'joreen@mp.com.sg', state: 'waiting', waitingFor: 'Packing list, HS code, cargo value and importer UEN before TradeNet filing', since: minsAgo(60 * 30), channel: 'email' }
+    ],
+    contacts: [
+      { email: 'wy.tan@titanassociates.com.sg', name: 'WY Tan', source: 'booking' },
+      { email: 'wytanj@gmail.com', name: 'WY Tan (personal)', source: 'inbound', at: minsAgo(150) }
+    ],
+    createdAt: minsAgo(60 * 96)
+  }
+  addEvent(s11, { type: 'created', actor: 'cs', note: 'New booking from Shenzhen agent — ex LCL Shenzhen to Singapore, c/o Titan Associates 2008403', at: minsAgo(60 * 96) })
+  addEvent(s11, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 96) })
+  addEvent(s11, { type: 'note', actor: 'cs', note: 'Cargo ready at shipper CFS, Shenzhen — 40 pkgs / 500 kg / 1.5 m³ wireless keyboards', at: minsAgo(60 * 80) })
+  addEvent(s11, { type: 'status', status: 'picked_up', actor: 'cs', note: 'Cargo received into Shenzhen CFS by ICS', at: minsAgo(60 * 72) })
+  addEvent(s11, { type: 'status', status: 'in_transit', actor: 'cs', note: 'Loaded on WAN HAI 516 V.W050 — ETD Shenzhen, ETA Singapore 11th', at: minsAgo(60 * 60) })
+  addEvent(s11, { type: 'customs', actor: 'cs', note: '🛃 Import declaration pending — packing list, HS code, cargo value and importer UEN still missing. M&P files on TradeNet once documents are checked.', at: minsAgo(60 * 30) })
+
+  // Scenario 12 — B2C last mile, delivered today, review ask already out and the
+  // customer has replied on WhatsApp asking about the reward.
+  const s12: Shipment = {
+    id: 'MP-7710-AF',
+    mode: 'b2c',
+    service: 'Last-mile delivery',
+    status: 'delivered',
+    customerName: 'Priya Nair',
+    customerEmail: 'priya.nair@example.sg',
+    origin: 'Allmighty Foods warehouse, Senoko Food Hub',
+    destination: 'Blk 88 Tampines St 81, #11-203',
+    eta: minsAgo(60 * 3),
+    driverName: 'Suresh Kumar',
+    driverPhone: '92345678',
+    vehicle: 'Van — GX 8814 D',
+    pieces: 1,
+    weightKg: 4,
+    description: 'Online order #AMF-10620 — jelly variety box & noodle pack',
+    events: [],
+    whatsapp: [
+      {
+        id: 'wa-7710-priya',
+        contactName: 'Priya Nair',
+        contactHandle: '+65 9887 3102',
+        contactRole: 'customer',
+        status: 'needs_reply',
+        messages: [
+          wa('wa-7710-priya-1', 'in', 'Priya Nair', 'Hi, nobody home till 7pm — can the driver come after that?', 60 * 6),
+          wa('wa-7710-priya-2', 'out', 'M&P CS', 'Hi Priya, noted. Suresh will swing back at the end of his route, around 7.15pm.', 330),
+          wa('wa-7710-priya-3', 'in', 'Priya Nair', 'Thanks, received 🙏 Is there a promo code for the review?', 135)
+        ]
+      }
+    ],
+    createdAt: minsAgo(60 * 11),
+    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 3) },
+    reviewAsk: { state: 'sent', trigger: 'delivered', at: minsAgo(60 * 2) }
+  }
+  addEvent(s12, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 11) })
+  addEvent(s12, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 11) })
+  addEvent(s12, { type: 'status', status: 'picked_up', actor: 'driver', at: minsAgo(60 * 7) })
+  addEvent(s12, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 6) })
+  addEvent(s12, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Tampines area, 3 stops away', at: minsAgo(340) })
+  addEvent(s12, { type: 'note', actor: 'driver', note: 'Nobody home — customer asked for after 7pm, moved to last stop', at: minsAgo(335) })
+  addEvent(s12, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Priya Nair', at: minsAgo(60 * 3) })
+  addEvent(s12, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 3) })
+  addEvent(s12, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 2) })
+
+  // Scenario 13 — delivered but disputed: Jewel charged an after-hours bay fee that
+  // Hey Fran says was never quoted. Open claim → review ask held.
+  const s13: Shipment = {
+    id: 'MP-7719-HF',
+    mode: 'b2self',
+    service: 'Last-mile delivery (own outlets)',
+    status: 'delivered',
+    customerName: 'Fran Lim',
+    customerEmail: 'fran@heyfran.com',
+    company: 'Hey Fran',
+    poNumber: 'TRF-0226',
+    origin: 'Hey Fran HQ & warehouse, Kaki Bukit Ave 1',
+    destination: 'Hey Fran pop-up, Jewel Changi Airport #B2-241',
+    eta: minsAgo(60 * 27),
+    driverName: 'Azlan Ismail',
+    driverPhone: '93456789',
+    vehicle: 'Van — GY 3307 A',
+    pieces: 6,
+    weightKg: 74,
+    description: 'Mid-week restock — retail stock & chiller display cards',
+    events: [],
+    whatsapp: [
+      {
+        id: 'wa-7719-fran',
+        contactName: 'Fran Lim',
+        contactHandle: '+65 9021 7744',
+        contactRole: 'customer',
+        status: 'waiting_on_them',
+        messages: [
+          wa('wa-7719-fran-1', 'in', 'Fran Lim', 'Jewel charged us $45 after-hours bay access again. That was never in the quote — can M&P absorb it or re-bill?', 60 * 24),
+          wa('wa-7719-fran-2', 'out', 'M&P CS', 'Hi Fran, logged as a destination fee dispute. Pulling the Jewel bay receipt and our quote — will revert by tomorrow.', 60 * 23),
+          wa('wa-7719-fran-3', 'out', 'M&P CS', 'Can your outlet send the Jewel charge slip? Billing needs it to raise the credit note.', 60 * 21)
+        ]
+      }
+    ],
+    createdAt: minsAgo(60 * 34),
+    signoff: { name: 'Aiman (Jewel outlet)', signature: SEED_SIGNATURE, at: minsAgo(60 * 26) },
+    claim: {
+      type: 'destination_fee',
+      note: 'Jewel B2 loading bay billed SGD 45 after-hours access — Hey Fran says it was not in the quote',
+      openedAt: minsAgo(60 * 24),
+      openedBy: 'customer',
+      status: 'open'
+    },
+    reviewAsk: {
+      state: 'held',
+      trigger: 'delivered',
+      at: minsAgo(60 * 24),
+      reason: 'Open destination fee dispute — routed to CS/claims, no review ask sent'
+    }
+  }
+  addEvent(s13, { type: 'created', actor: 'cs', note: 'Internal transfer booked, tracking link shared', at: minsAgo(60 * 34) })
+  addEvent(s13, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 34) })
+  addEvent(s13, { type: 'status', status: 'picked_up', actor: 'driver', note: '6 cartons loaded at Kaki Bukit', at: minsAgo(60 * 30) })
+  addEvent(s13, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 29) })
+  addEvent(s13, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Arriving Jewel B2 loading bay', at: minsAgo(60 * 27) })
+  addEvent(s13, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Aiman (Jewel outlet)', at: minsAgo(60 * 26) })
+  addEvent(s13, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 26) })
+  addEvent(s13, { type: 'claim', actor: 'customer', note: '⚠️ Destination fee dispute opened by customer: Jewel B2 loading bay billed SGD 45 after-hours access', at: minsAgo(60 * 24) })
+  addEvent(s13, { type: 'note', actor: 'system', note: '⏸ Review request held — open destination fee dispute → CS/claims', internal: true, at: minsAgo(60 * 24) })
+  addEvent(s13, { type: 'note', actor: 'cs', note: 'Billing pulling the Jewel charge slip against QT-HF standing rates', at: minsAgo(60 * 21) })
+
+  // WhatsApp + partner coordination on the existing hero jobs
+  s1.whatsapp = [
+    {
+      id: 'wa-4471-melissa',
+      contactName: 'Melissa Tan',
+      contactHandle: '+65 9123 4567',
+      contactRole: 'customer',
+      status: 'closed',
+      messages: [
+        wa('wa-4471-melissa-1', 'in', 'Melissa Tan', 'Morning! Container out of PSA already? Need to tell my warehouse boys what time to standby.', 200),
+        wa('wa-4471-melissa-2', 'out', 'M&P CS', 'Hi Melissa, permit cleared this morning. Hafiz collected at PSA about 2h ago, heading Senoko now.', 195),
+        wa('wa-4471-melissa-3', 'in', 'Melissa Tan', 'Can we take the 2pm slot tomorrow instead? Bay 2 is tied up today.', 40),
+        wa('wa-4471-melissa-4', 'out', 'M&P CS', '2pm Senoko slot confirmed with NEK. Hafiz will call 30 min before he reaches.', 30)
+      ]
+    },
+    {
+      id: 'wa-4471-hafiz',
+      contactName: 'Hafiz Rahman (driver)',
+      contactHandle: '+65 9123 4567',
+      contactRole: 'driver',
+      status: 'closed',
+      messages: [
+        wa('wa-4471-hafiz-1', 'in', 'Hafiz Rahman', 'Reached PSA gate, queue about 20 min.', 130),
+        wa('wa-4471-hafiz-2', 'out', 'M&P CS', 'Noted Hafiz. Check seal against the DO then straight to Senoko ah.', 128),
+        wa('wa-4471-hafiz-3', 'in', 'Hafiz Rahman', 'Seal intact, photo posted on the job.', 120, { name: 'seal-TEMU4823910.jpg', kind: 'image' }),
+        wa('wa-4471-hafiz-4', 'out', 'M&P CS', 'Good, thanks 👍', 118)
+      ]
+    }
+  ]
+  s1.partners = [
+    { role: 'shipping_line', name: 'SINOKOR Merchant Marine', contact: 'sin.docs@sinokor.example', state: 'done', since: minsAgo(60 * 9), channel: 'email' },
+    { role: 'warehouse', name: 'PSA Pasir Panjang Terminal 3', state: 'done', since: minsAgo(60 * 2), channel: 'email' },
+    { role: 'broker', name: 'Joreen (M&P Customs)', contact: 'joreen@mp.com.sg', state: 'done', since: minsAgo(60 * 6), channel: 'email' },
+    { role: 'haulier', name: 'NEK Logistics', contact: '+65 6285 4410', state: 'ok', waitingFor: '2pm Senoko unloading slot confirmed', since: minsAgo(30), eta: new Date(Date.now() + 3 * 3600_000).toISOString(), channel: 'whatsapp' }
+  ]
+
+  s4.partners = [
+    { role: 'agent', name: 'Sunjin Logis (Mr Park) — M&P Korea partner', contact: 'park@sunjinlogis.example', state: 'waiting', waitingFor: 'Shipper cargo-ready date + FCL 20ft stuffing option', since: minsAgo(60 * 22), channel: 'email' },
+    { role: 'warehouse', name: 'Busan CFS', state: 'na', since: minsAgo(60 * 22) },
+    { role: 'broker', name: 'Joreen (M&P Customs)', contact: 'joreen@mp.com.sg', state: 'na', since: minsAgo(60 * 22), channel: 'email' }
+  ]
+
+  s5.whatsapp = [
+    {
+      id: 'wa-3318-brendan',
+      contactName: 'Brendan De Souza',
+      contactHandle: '+65 8112 9043',
+      contactRole: 'customer',
+      status: 'needs_reply',
+      messages: [
+        wa('wa-3318-brendan-1', 'out', 'M&P CS', 'Hi Brendan — HONGKONG BRIDGE ETA Singapore in 2 days. We still need the commercial invoice and packing list before Joreen can file the permit.', 60 * 6),
+        wa('wa-3318-brendan-2', 'in', 'Brendan De Souza', 'Noted! Invoice coming tonight from the HK side. Can you pre-fill the declaration first so we don\'t lose a day?', 60 * 5)
+      ]
+    }
+  ]
+  s5.partners = [
+    { role: 'shipping_line', name: 'ICS / Iconsol Shipping', contact: '+852 2765 8741', state: 'ok', waitingFor: 'Vessel ETA Singapore in 2 days', since: minsAgo(60 * 20), eta: new Date(Date.now() + 2 * 24 * 3600_000).toISOString(), channel: 'email' },
+    { role: 'warehouse', name: 'Keppel Distripark CFS', contact: 'slots@keppelcfs.example', state: 'waiting', waitingFor: 'Unstuff slot — CFS to confirm bay and timing', since: minsAgo(60 * 18), channel: 'email' },
+    { role: 'broker', name: 'Joreen (M&P Customs)', contact: 'joreen@mp.com.sg', state: 'waiting', waitingFor: 'Commercial invoice + packing list before TradeNet filing', since: minsAgo(60 * 20), channel: 'email' }
+  ]
+
+  s8.whatsapp = [
+    {
+      id: 'wa-8102-priya',
+      contactName: 'Priya Nair',
+      contactHandle: '+65 9887 3102',
+      contactRole: 'customer',
+      status: 'closed',
+      messages: [
+        wa('wa-8102-priya-1', 'in', 'Priya Nair', 'Hi, is the gummies order arriving today? I am home after 4.', 60 * 7),
+        wa('wa-8102-priya-2', 'out', 'M&P CS', 'Hi Priya, yes — Suresh is 2 stops away, about 25 min.', 60 * 6),
+        wa('wa-8102-priya-3', 'in', 'Priya Nair', 'Received, thank you!', 60 * 5),
+        wa('wa-8102-priya-4', 'out', 'M&P CS', 'Thanks Priya 🙏 We have sent a quick review link to your email.', 60 * 4)
+      ]
+    }
+  ]
+
+  s10.whatsapp = [
+    {
+      id: 'wa-8125-fran',
+      contactName: 'Fran Lim',
+      contactHandle: '+65 9021 7744',
+      contactRole: 'customer',
+      status: 'waiting_on_them',
+      messages: [
+        wa('wa-8125-fran-1', 'in', 'Fran Lim', '2 of the 8 cartons came in dented at the corner — Jewel outlet just flagged it.', 80, { name: 'dented-carton.jpg', kind: 'image' }),
+        wa('wa-8125-fran-2', 'out', 'M&P CS', 'Sorry about that Fran. Sarah from CS has opened a damage claim. Can the outlet send photos of both cartons plus the carton numbers?', 70)
+      ]
+    }
+  ]
+  s10.partners = [
+    { role: 'haulier', name: 'M&P own fleet — Azlan Ismail', contact: '+65 9345 6789', state: 'done', since: minsAgo(90), channel: 'whatsapp' },
+    { role: 'warehouse', name: 'Jewel Changi B2 loading bay', state: 'waiting', waitingFor: 'Bay CCTV clip for the damage report', since: minsAgo(70), channel: 'email' }
+  ]
+
   // Same job, different inboxes — colleague / Gmail / personal
   s1.contacts = [
     { email: s1.customerEmail, name: s1.customerName, source: 'booking' },
@@ -918,15 +1349,35 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s5, { type: 'note', actor: 'cs', note: '📩 brendan.ds@gmail.com wrote in quoting this job (new address brendan.ds@gmail.com)', internal: true, at: minsAgo(60 * 18) })
   addEvent(s5, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "MP-3318-MC — any update on unstuffing?"', internal: true, at: minsAgo(60 * 17) })
 
-  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
+  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13]
   const emails: OutboxEmail[] = [
-    ...[s1, s2, s3, s5, s6, s7, s8, s9, s10].map((s) => buildTrackingEmail(s, s.createdAt)),
+    ...[s1, s2, s3, s5, s6, s7, s8, s9, s10, s11, s12, s13].map((s) => buildTrackingEmail(s, s.createdAt)),
     buildReviewEmail(s6, minsAgo(60 * 18)),
     buildRewardEmail(s6, 'MP10OFF', minsAgo(60 * 12)),
     buildReviewEmail(s7, minsAgo(60 * 26)),
     buildReviewEmail(s8, minsAgo(60 * 4)),
     buildReviewEmail(s9, minsAgo(60 * 46)),
     buildRewardEmail(s9, 'GRAB10-HF', minsAgo(60 * 40)),
+    buildReviewEmail(s12, minsAgo(60 * 2)),
+    // Titan: CS chased the packing list, WY replied asking for the arrival notice — needs a reply
+    buildCsReplyEmail({
+      id: 'out-9032-titan',
+      shipment: s11,
+      to: 'wytanj@gmail.com',
+      subject: 'MP-9032-TA — packing list still outstanding',
+      body: 'Dear WY,\n\nWe have the commercial invoice and the HBL copy, but the shipper has not released the packing list. Joreen cannot file the TradeNet declaration without it, and Pan-Asia CFS will not unstuff until the permit is out.\n\nCould you chase Cafganic on your side?\n\n— Christina Ng, M&P Customer Service',
+      at: minsAgo(60 * 26)
+    }),
+    buildInboundEmail({
+      id: 'in-9032-titan',
+      shipment: s11,
+      from: 'wytanj@gmail.com',
+      fromName: 'WY Tan',
+      subject: 'MP-9032-TA — arrival notice (NOA) and invoice?',
+      body: 'Hi Christina,\n\nMy warehouse says the vessel is already in. Can you send us the arrival notice (NOA) plus the invoices so I can arrange payment? GST on cash term like last time, I will provide the payment advice.\n\nAlso chasing Cafganic for the packing list now.\n\nThanks,\nWY Tan\nTitan Associates Pte Ltd',
+      at: minsAgo(150),
+      matchedBy: 'shipment-id'
+    }),
     buildInboundEmail({
       id: 'in-4471-esther',
       shipment: s1,

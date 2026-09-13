@@ -1,12 +1,19 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'ops' })
+
 useHead({ title: 'Review rewards — M&P International Freights' })
 </script>
 
 <template>
-  <div>
-    <TopBar role="Customer Service view" nav="cs" />
-    <main class="page wide">
-      <RewardsDashboard />
-    </main>
-  </div>
+  <UDashboardPanel>
+    <template #header>
+      <UDashboardNavbar title="Rewards" icon="i-lucide-gift" />
+    </template>
+
+    <template #body>
+      <main class="page wide" style="max-width: none; padding: 0">
+        <RewardsDashboard />
+      </main>
+    </template>
+  </UDashboardPanel>
 </template>

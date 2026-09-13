@@ -10,9 +10,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Shipment not found' })
   }
 
-  const { contacts: _contacts, driverPhone: _driverPhone, ...safe } = shipment
+  // Internal-only surfaces: CS contact list, driver mobile, the simulated
+  // WhatsApp threads and the partner coordination board never leave the office.
+  const {
+    contacts: _contacts,
+    driverPhone: _driverPhone,
+    whatsapp: _whatsapp,
+    partners: _partners,
+    ...safe
+  } = shipment
   return {
     ...safe,
+    // The TradeNet key-in draft is internal too — the customer sees the outcome.
+    customs: shipment.customs
+      ? (({ declaration: _declaration, ...c }) => c)(shipment.customs)
+      : undefined,
     events: shipment.events.filter((e) => e.internal !== true)
   }
 })

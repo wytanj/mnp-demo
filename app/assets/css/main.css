@@ -1,3 +1,36 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* M&P brand ramp — 500 is the house orange #F17421. Nuxt UI maps primary → brand
+   via app/app.config.ts (`ui.colors.primary = 'brand'`).
+
+   `static` is required: Nuxt UI references these as `var(--color-brand-500, )`
+   from a runtime <style> tag, which Tailwind cannot see, so without `static`
+   the whole ramp is tree-shaken and primary resolves to nothing. */
+@theme static {
+  --color-brand-50: #fff4ec;
+  --color-brand-100: #ffe6d4;
+  --color-brand-200: #fecaa8;
+  --color-brand-300: #fda871;
+  --color-brand-400: #fa8b42;
+  --color-brand-500: #f17421;
+  --color-brand-600: #d9621a;
+  --color-brand-700: #b34e12;
+  --color-brand-800: #8f3f12;
+  --color-brand-900: #743613;
+  --color-brand-950: #3f1908;
+
+  /* charcoal ground used by the ops sidebar / driver bar */
+  --color-charcoal: #221f1f;
+  --color-charcoal-soft: #3a3432;
+}
+
+/* ===========================================================================
+   Everything below this line is the ORIGINAL M&P stylesheet. Legacy pages
+   (/track, /review, /quote, /statement, /driver, /rewards) depend on
+   .page .card .pill .topbar .btn … — do not delete or reorder.
+   =========================================================================== */
+
 /* M&P International Freights palette — charcoal #221F1F + orange #F17421 */
 :root {
   --navy: #221f1f;
@@ -734,3 +767,11 @@ input:focus, textarea:focus, select:focus {
 }
 .mail-confirm p { margin: 0 0 8px; font-size: 13px; }
 .mail-confirm p:last-of-type { margin-bottom: 10px; }
+
+/* legacy compat — Tailwind preflight unsets heading sizes and list markers that
+   the legacy pages assumed from the UA stylesheet. Minimal restore, scoped to
+   .page so Nuxt UI surfaces are untouched. */
+.page h2 { font-size: 18px; font-weight: 700; }
+.page h3 { font-size: 15px; font-weight: 700; }
+.page .card h2 { font-size: 16px; font-weight: 700; }
+.compare ul { list-style: disc; }

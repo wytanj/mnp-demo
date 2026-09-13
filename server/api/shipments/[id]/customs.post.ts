@@ -1,5 +1,31 @@
-import type { ShipmentCustoms, ShipmentDocument } from '#shared/utils/shipping'
-import { customsReady } from '#shared/utils/shipping'
+import type { CustomsDeclaration, ShipmentCustoms, ShipmentDocument } from '#shared/utils/shipping'
+import { DECLARATION_LABELS, customsReady, declarationGaps } from '#shared/utils/shipping'
+
+/** Demo permit number — a real one comes back from TradeNet after a person files. */
+function demoPermitNo(): string {
+  return `IN-2026-09-${String(Math.floor(100000 + Math.random() * 900000))}`
+}
+
+const DECLARATION_KEYS = Object.keys(DECLARATION_LABELS) as Array<keyof CustomsDeclaration>
+const NUMERIC_KEYS: Array<keyof CustomsDeclaration> = ['cargoValue', 'packages', 'grossWeightKg']
+
+/** Keep only known declaration fields, and coerce the numeric ones. */
+function cleanDeclaration(input: unknown): CustomsDeclaration {
+  const src = (input ?? {}) as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const key of DECLARATION_KEYS) {
+    if (!(key in src)) continue
+    const raw = src[key]
+    if (raw === null || raw === undefined || raw === '') continue
+    if (NUMERIC_KEYS.includes(key)) {
+      const n = Number(raw)
+      if (!Number.isNaN(n)) out[key] = n
+      continue
+    }
+    out[key] = typeof raw === 'string' ? raw.trim() : raw
+  }
+  return out as CustomsDeclaration
+}
 
 /**
  * TradeNet is human-in-the-loop. M&P collect and check the documents here; an
@@ -7,6 +33,8 @@ import { customsReady } from '#shared/utils/shipping'
  * records it against the job. Nothing is ever submitted automatically.
  *
  * POST { action: 'mark_ready' | 'mark_declared' | 'mark_cleared', by, permitNo? }
+ *    | { action: 'save_declaration', declaration }
+ *    | { action: 'submit_demo', by }
  */
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -22,6 +50,69 @@ export default defineEventHandler(async (event) => {
   const at = new Date().toISOString()
 
   const customs: ShipmentCustoms = shipment.customs ?? { required: true, status: 'docs_pending' }
+
+  if (action === 'save_declaration') {
+    const patch = cleanDeclaration(body?.declaration)
+    customs.declaration = { ...(customs.declaration ?? {}), ...patch }
+    shipment.customs = customs
+    const gaps = declarationGaps(shipment)
+    if (!gaps.length && customs.status === 'docs_pending') {
+      customs.status = 'ready_for_declaration'
+      customs.note = 'Declaration keyed in and documents checked — awaiting manual TradeNet filing by our customs team'
+    }
+    addEvent(shipment, {
+      type: 'customs',
+      actor: 'cs',
+      note: `🛃 TradeNet declaration draft saved${gaps.length ? ` — still missing: ${gaps.join(', ')}` : ' — no gaps left, ready to file'}`,
+      internal: true,
+      at
+    })
+    await dbSaveShipment(shipment)
+    return { ok: true, declaration: customs.declaration, gaps, shipment }
+  }
+
+  if (action === 'submit_demo') {
+    if (!by) {
+      throw createError({ statusCode: 400, statusMessage: 'by (M&P customs officer name) is required' })
+    }
+    const gaps = declarationGaps(shipment)
+    if (gaps.length) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: `Cannot file on TradeNet yet — ${gaps.length} item${gaps.length === 1 ? '' : 's'} still missing: ${gaps.join(', ')}`
+      })
+    }
+
+    const permit = permitNo || demoPermitNo()
+    customs.status = 'declared'
+    customs.declaredBy = by
+    customs.declaredAt = at
+    customs.permitNo = permit
+    customs.note = `Declaration filed on TradeNet by ${by} (demo) after doc check`
+    customs.declaration = { ...(customs.declaration ?? {}), filedBy: by, filedAt: at, permitNo: permit }
+    shipment.customs = customs
+
+    // The permit is the output of the filing — approve the row if the job has one.
+    const permitDoc = (shipment.documents ?? []).find((d) => d.key === 'permit')
+    if (permitDoc) {
+      permitDoc.status = 'approved'
+      permitDoc.category = 'customs'
+      permitDoc.uploadedBy = by
+      permitDoc.verifiedBy = by
+      permitDoc.at = at
+      permitDoc.fileName = permitDoc.fileName ?? `permit-${shipment.id}.pdf`
+      permitDoc.note = 'Filed on TradeNet by M&P after doc check (demo)'
+    }
+
+    addEvent(shipment, {
+      type: 'customs',
+      actor: 'cs',
+      note: `🛃 Declaration filed on TradeNet by ${by} (demo) · permit ${permit}`,
+      at
+    })
+    await dbSaveShipment(shipment)
+    return { ok: true, permitNo: permit, customs, shipment }
+  }
 
   if (action === 'mark_ready') {
     if (!customsReady(shipment)) {
@@ -117,6 +208,6 @@ export default defineEventHandler(async (event) => {
 
   throw createError({
     statusCode: 400,
-    statusMessage: "action must be 'mark_ready', 'mark_declared' or 'mark_cleared'"
+    statusMessage: "action must be 'save_declaration', 'submit_demo', 'mark_ready', 'mark_declared' or 'mark_cleared'"
   })
 })

@@ -114,6 +114,8 @@ export interface ShipmentCustoms {
   permitNo?: string // manual entry after a person files on TradeNet
   clearedAt?: string
   note?: string
+  /** TradeNet key-in draft — see DECLARATION_REQUIRED / declarationGaps(). */
+  declaration?: CustomsDeclaration
 }
 
 export const CUSTOMS_LABELS: Record<CustomsStatus, string> = {
@@ -193,6 +195,10 @@ export interface Shipment {
   // People who have written in about this job — booking address plus any
   // Gmail / SingNet / colleague domain that later attached itself.
   contacts?: ShipmentContact[]
+  /** Simulated WhatsApp conversations tied to this job (pitch mode). */
+  whatsapp?: WaThread[]
+  /** Who else has to move before this job can: line, CFS, broker, agent, haulier. */
+  partners?: PartnerStatus[]
   createdAt: string
 }
 
@@ -346,4 +352,201 @@ export function reviewAskDecision(
   if (s.reviewAsk?.state === 'sent') return { send: false, reason: 'Review request already sent' }
   if (s.reviewAsk?.state === 'answered') return { send: false, reason: 'Review request already answered' }
   return { send: true }
+}
+
+// ---------------------------------------------------------------------------
+// Comms, partner coordination and TradeNet declaration drafts
+// ---------------------------------------------------------------------------
+
+export type Channel = 'email' | 'whatsapp'
+export type PartnerRole = 'shipping_line' | 'warehouse' | 'broker' | 'agent' | 'haulier'
+export type PartnerState = 'ok' | 'waiting' | 'blocked' | 'done' | 'na'
+
+export const PARTNER_ROLE_LABELS: Record<PartnerRole, string> = {
+  shipping_line: 'Shipping line',
+  warehouse: 'Warehouse / CFS',
+  broker: 'Customs broker',
+  agent: 'Overseas agent',
+  haulier: 'Haulier'
+}
+
+export const PARTNER_STATE_LABELS: Record<PartnerState, string> = {
+  ok: 'On track',
+  waiting: 'Waiting on them',
+  blocked: 'Blocked',
+  done: 'Done',
+  na: 'Not applicable'
+}
+
+export interface ThreadMessage {
+  id: string
+  direction: 'in' | 'out'
+  from: string
+  body: string
+  at: string
+  attachment?: { name: string; kind: 'pdf' | 'image' }
+}
+
+/** A WhatsApp conversation tied to a job (embedded in the shipment JSON → persists with it). */
+export interface WaThread {
+  id: string // 'wa-4471-melissa'
+  contactName: string
+  contactHandle: string // '+65 9123 4567'
+  contactRole: 'customer' | PartnerRole | 'driver' | 'other'
+  status: 'needs_reply' | 'waiting_on_them' | 'closed'
+  messages: ThreadMessage[]
+}
+
+export interface PartnerStatus {
+  role: PartnerRole
+  name: string
+  contact?: string
+  state: PartnerState
+  waitingFor?: string
+  since?: string
+  eta?: string
+  channel?: Channel
+}
+
+/** TradeNet declaration draft — fillable client-side, missing fields = customs gap. */
+export interface CustomsDeclaration {
+  declarationType?: 'IN' | 'OUT' | 'TRANSHIPMENT'
+  hsCode?: string
+  cargoValue?: number
+  currency?: string
+  countryOfOrigin?: string
+  importerUEN?: string
+  importerName?: string
+  permitType?: string
+  vesselName?: string
+  voyage?: string
+  blNo?: string
+  containerNo?: string
+  portOfLoading?: string
+  portOfDischarge?: string
+  packages?: number
+  grossWeightKg?: number
+  description?: string
+  incoterms?: string
+  filedBy?: string
+  filedAt?: string
+  permitNo?: string // set by submit (demo)
+}
+
+export const DECLARATION_REQUIRED: Array<keyof CustomsDeclaration> = [
+  'declarationType', 'hsCode', 'cargoValue', 'currency', 'countryOfOrigin', 'importerUEN',
+  'vesselName', 'blNo', 'portOfLoading', 'portOfDischarge', 'packages', 'grossWeightKg', 'description'
+]
+
+export const DECLARATION_LABELS: Record<keyof CustomsDeclaration, string> = {
+  declarationType: 'Declaration type',
+  hsCode: 'HS code',
+  cargoValue: 'Cargo value',
+  currency: 'Currency',
+  countryOfOrigin: 'Country of origin',
+  importerUEN: 'Importer UEN',
+  importerName: 'Importer name',
+  permitType: 'Permit type',
+  vesselName: 'Vessel name',
+  voyage: 'Voyage',
+  blNo: 'B/L number',
+  containerNo: 'Container number',
+  portOfLoading: 'Port of loading',
+  portOfDischarge: 'Port of discharge',
+  packages: 'Packages',
+  grossWeightKg: 'Gross weight (kg)',
+  description: 'Goods description',
+  incoterms: 'Incoterms',
+  filedBy: 'Filed by',
+  filedAt: 'Filed at',
+  permitNo: 'Permit number'
+}
+
+function declarationFieldFilled(v: unknown): boolean {
+  if (v === undefined || v === null) return false
+  if (typeof v === 'string') return v.trim().length > 0
+  if (typeof v === 'number') return !Number.isNaN(v)
+  return true
+}
+
+/**
+ * What is still missing before an M&P customs officer can file on TradeNet:
+ * required declaration fields plus any customs document that is not cleared.
+ */
+export function declarationGaps(s: Shipment): string[] {
+  const gaps: string[] = []
+  const d = s.customs?.declaration ?? {}
+  for (const key of DECLARATION_REQUIRED) {
+    if (!declarationFieldFilled(d[key])) gaps.push(DECLARATION_LABELS[key])
+  }
+  for (const doc of customsDocs(s)) {
+    if (doc.required && doc.status !== 'approved' && doc.status !== 'waived') {
+      gaps.push(`Document: ${doc.label}`)
+    }
+  }
+  return gaps
+}
+
+/** Unified inbox thread — computed by GET /api/comms, never stored. */
+export interface CommsThread {
+  id: string
+  channel: Channel
+  shipmentId: string | null
+  contactName: string
+  contactHandle: string
+  contactRole: string
+  subject: string
+  lastAt: string
+  status: 'needs_reply' | 'waiting_on_them' | 'closed'
+  messages: ThreadMessage[]
+}
+
+/** Rate-card enquiry from the portal — in-memory only (server/utils/quotes.ts). */
+export interface QuoteRequest {
+  id: string
+  ref: string
+  at: string
+  company: string
+  contact: string
+  email: string
+  mode: 'FCL' | 'LCL' | 'AIR' | 'LAST_MILE'
+  origin: string
+  destination: string
+  cargo: string
+  readyDate?: string
+  incoterms?: string
+  status: 'new' | 'auto_quoted' | 'sent' | 'won' | 'lost'
+  autoQuote?: {
+    rateCardRef: string
+    estimate: number
+    currency: string
+    validUntil: string
+    lines: Array<{ label: string; amount: number; currency: string }>
+  }
+}
+
+/** WhatsApp threads on this job still waiting for an M&P reply. */
+export function waThreadsNeedingReply(s: Shipment): WaThread[] {
+  return (s.whatsapp ?? []).filter((t) => t.status === 'needs_reply')
+}
+
+/** ISO timestamp of the newest timeline event (falls back to createdAt). */
+export function lastEventAt(s: Shipment): string {
+  let latest = s.createdAt
+  for (const e of s.events ?? []) {
+    if (e.at > latest) latest = e.at
+  }
+  return latest
+}
+
+/** Undelivered job with no movement for `hours` — the ops "stuck" alert. */
+export function isStuck(s: Shipment, hours = 24): boolean {
+  if (s.status === 'delivered') return false
+  return Date.now() - new Date(lastEventAt(s)).getTime() > hours * 3600_000
+}
+
+/** ETA is in the past and the job is not delivered yet. */
+export function etaPassed(s: Shipment): boolean {
+  if (s.status === 'delivered') return false
+  return new Date(s.eta).getTime() < Date.now()
 }

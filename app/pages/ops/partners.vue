@@ -83,6 +83,46 @@ const byRole = computed(() =>
   })).filter((c) => c.items.length)
 )
 
+/* ── who the outside parties actually are ──
+   Names carry a contact person ("Wan Hai Lines — Kelvin Lau"); we key the
+   "Partners in play" strip on the org half so the same firm counts once. */
+const STATE_RANK: Record<PartnerState, number> = { blocked: 0, waiting: 1, ok: 2, done: 3, na: 4 }
+
+function orgName(name: string): string {
+  return (name.split(/\s[—–-]\s/)[0] ?? name).trim()
+}
+
+/** Customers are "Titan Associates Pte Ltd" in the data — drop the legal suffix inline. */
+function shortCustomer(client: string): string {
+  return client.replace(/\s+(Pte\.?\s+Ltd\.?|Pte\.?|Ltd\.?)$/i, '').trim()
+}
+
+const partnersInPlay = computed(() => {
+  const map = new Map<string, { name: string; jobs: Set<string>; state: PartnerState }>()
+  for (const p of flat.value) {
+    if (p.state === 'na') continue
+    const key = orgName(p.name)
+    const hit = map.get(key)
+    if (!hit) {
+      map.set(key, { name: key, jobs: new Set([p.job.shipmentId]), state: p.state })
+      continue
+    }
+    hit.jobs.add(p.job.shipmentId)
+    if (STATE_RANK[p.state] < STATE_RANK[hit.state]) hit.state = p.state
+  }
+  return [...map.values()]
+    .map((o) => ({ name: o.name, jobs: o.jobs.size, state: o.state }))
+    .sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state] || b.jobs - a.jobs || a.name.localeCompare(b.name))
+})
+
+const DOT_CLASS: Record<PartnerState, string> = {
+  ok: 'bg-emerald-500',
+  waiting: 'bg-amber-500',
+  blocked: 'bg-red-500',
+  done: 'bg-zinc-400',
+  na: 'bg-zinc-300'
+}
+
 /* ── slideover ── */
 const open = ref(false)
 const active = ref<{ partner: PartnerStatus; job: PartnerRow } | null>(null)
@@ -164,7 +204,7 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
 <template>
   <UDashboardPanel>
     <template #header>
-      <UDashboardNavbar title="Partners" icon="i-lucide-handshake">
+      <UDashboardNavbar title="Trade partners" icon="i-lucide-handshake">
         <template #right>
           <UTabs
             v-model="tab"
@@ -175,11 +215,16 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
             size="xs"
             :ui="{ list: 'bg-zinc-100' }"
           />
+          <DemoHowTo page="ops-partners" />
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
+      <p class="text-xs text-zinc-500 shrink-0">
+        Trade partners are the outside parties M&amp;P needs on each job — not the customer.
+      </p>
+
       <!-- top strip -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
         <UPageCard
@@ -201,6 +246,25 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
         </UPageCard>
       </div>
 
+      <!-- who the outside parties actually are -->
+      <div v-if="partnersInPlay.length" class="shrink-0">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Partners in play</p>
+        <div class="mt-1.5 flex flex-wrap gap-1.5">
+          <button
+            v-for="o in partnersInPlay"
+            :key="o.name"
+            type="button"
+            class="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] text-zinc-600 hover:border-primary-300 hover:bg-primary-50/40 transition-colors"
+            :title="`${o.name} — ${PARTNER_STATE_LABELS[o.state].toLowerCase()}`"
+            @click="view = 'partner'"
+          >
+            <span class="size-1.5 rounded-full shrink-0" :class="DOT_CLASS[o.state]" />
+            <span class="font-medium text-zinc-800">{{ o.name }}</span>
+            <span class="text-zinc-400">· {{ o.jobs }} {{ o.jobs === 1 ? 'job' : 'jobs' }} · {{ PARTNER_STATE_LABELS[o.state].toLowerCase() }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- BY JOB -->
       <div v-if="view === 'job'" class="grid gap-3 xl:grid-cols-2">
         <UCard v-for="r in rows" :key="r.shipmentId" :ui="{ body: 'p-4 sm:p-4' }">
@@ -211,14 +275,21 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
             <UBadge :label="r.status" color="neutral" variant="subtle" size="sm" />
             <span class="ms-auto text-[11px] text-zinc-400">ETA {{ shortDate(r.eta) }}</span>
           </div>
-          <p class="text-sm font-semibold text-zinc-800 mt-1">{{ r.client }}</p>
-          <p class="text-xs text-zinc-500 line-clamp-1">{{ r.route }}</p>
+          <p class="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+            <UIcon name="i-lucide-building-2" class="size-3 shrink-0 text-zinc-400" />
+            <span class="truncate">Customer · {{ r.client }}</span>
+          </p>
+          <p class="text-[11px] text-zinc-400 line-clamp-1">{{ r.route }}</p>
 
-          <div class="mt-3 flex flex-wrap gap-2">
+          <p class="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Trade partners on this job
+          </p>
+          <div class="mt-1.5 grid gap-2 sm:grid-cols-2">
             <OpsPartnerChip
               v-for="p in r.partners"
               :key="p.role"
               :partner="p"
+              compact
               @click="openPartner(r, p)"
             />
           </div>
@@ -226,37 +297,42 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
       </div>
 
       <!-- BY PARTNER -->
-      <div v-else class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <div v-for="col in byRole" :key="col.role" class="rounded-xl border border-zinc-200 bg-white">
-          <div class="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-100">
-            <UIcon :name="ROLE_ICON[col.role]" class="size-4 text-zinc-400" />
-            <h3 class="text-xs font-bold uppercase tracking-wide text-zinc-600">{{ col.label }}</h3>
-            <UBadge :label="String(col.items.length)" color="neutral" variant="subtle" size="sm" class="ms-auto" />
-          </div>
-          <div class="p-2.5 space-y-2">
-            <button
-              v-for="(p, i) in col.items"
-              :key="`${p.job.shipmentId}-${i}`"
-              type="button"
-              class="w-full text-left rounded-lg border border-zinc-200 bg-white p-2.5 hover:border-primary-300 hover:bg-primary-50/40 transition-colors"
-              @click="openPartner(p.job, p)"
-            >
-              <span class="flex items-center gap-1.5">
-                <span class="font-mono text-[11px] font-bold text-zinc-700">{{ p.job.shipmentId }}</span>
+      <div v-else class="space-y-2.5">
+        <p class="text-xs text-zinc-500">
+          One column per partner role. Grouped by who has to move next — not by customer.
+        </p>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div v-for="col in byRole" :key="col.role" class="rounded-xl border border-zinc-200 bg-white">
+            <div class="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-100">
+              <UIcon :name="ROLE_ICON[col.role]" class="size-4 text-zinc-400" />
+              <h3 class="text-xs font-bold uppercase tracking-wide text-zinc-600">{{ col.label }}</h3>
+              <UBadge :label="String(col.items.length)" color="neutral" variant="subtle" size="sm" class="ms-auto" />
+            </div>
+            <div class="p-2.5 space-y-2">
+              <button
+                v-for="(p, i) in col.items"
+                :key="`${p.job.shipmentId}-${i}`"
+                type="button"
+                class="w-full text-left rounded-lg border border-zinc-200 bg-white p-2.5 hover:border-primary-300 hover:bg-primary-50/40 transition-colors"
+                @click="openPartner(p.job, p)"
+              >
+                <span class="block text-sm font-bold text-zinc-900 leading-snug">{{ p.name }}</span>
                 <UBadge
                   :label="PARTNER_STATE_LABELS[p.state]"
                   :color="STATE_COLOR[p.state]"
                   variant="subtle"
                   size="sm"
-                  class="ms-auto"
+                  class="mt-1"
                 />
-              </span>
-              <span class="block text-xs font-semibold text-zinc-800 truncate mt-1">{{ p.name }}</span>
-              <span v-if="p.waitingFor" class="block text-[11px] text-zinc-500 leading-snug mt-0.5 line-clamp-2">
-                {{ p.waitingFor }}
-              </span>
-              <span v-if="p.since" class="block text-[10px] text-zinc-400 mt-1">since {{ since(p.since) }}</span>
-            </button>
+                <span class="block text-[11px] text-zinc-500 truncate mt-1">
+                  <span class="font-mono">{{ p.job.shipmentId }}</span> · {{ shortCustomer(p.job.client) }}
+                </span>
+                <span v-if="p.waitingFor" class="block text-[11px] text-zinc-500 leading-snug mt-1 line-clamp-2">
+                  {{ p.waitingFor }}
+                </span>
+                <span v-if="p.since" class="block text-[10px] text-zinc-400 mt-1">since {{ since(p.since) }}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -282,7 +358,7 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
 
         <dl class="text-sm divide-y divide-zinc-100 rounded-lg border border-zinc-200">
           <div class="flex gap-3 px-3 py-2">
-            <dt class="w-28 shrink-0 text-xs font-medium text-zinc-500">Job</dt>
+            <dt class="w-28 shrink-0 text-xs font-medium text-zinc-500">Job / customer</dt>
             <dd class="min-w-0">
               <NuxtLink :to="`/ops/jobs/${active.job.shipmentId}`" class="font-mono text-primary-600 hover:underline">
                 {{ active.job.shipmentId }}

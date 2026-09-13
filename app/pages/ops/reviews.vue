@@ -100,7 +100,8 @@ async function reward({ row, code }: { row: ReviewRow; code: string }) {
     <template #header>
       <UDashboardNavbar title="Reviews" icon="i-lucide-star">
         <template #right>
-          <UButton to="/rewards" icon="i-lucide-gift" color="neutral" variant="outline" size="sm" label="Rewards dashboard" />
+          <UButton to="/ops/rewards" icon="i-lucide-gift" color="neutral" variant="outline" size="sm" label="Review programme" />
+          <DemoHowTo page="ops-reviews" />
         </template>
       </UDashboardNavbar>
     </template>

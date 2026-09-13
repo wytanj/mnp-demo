@@ -10,7 +10,6 @@ defineProps<{ role?: string; nav?: 'cs' }>()
       </NuxtLink>
       <nav v-if="nav === 'cs'" class="topbar-nav">
         <NuxtLink to="/">Operations</NuxtLink>
-        <NuxtLink to="/rewards">Rewards</NuxtLink>
       </nav>
       <span v-if="role" class="role-tag">{{ role }}</span>
     </div>

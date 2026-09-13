@@ -1,3 +1,12 @@
+/** Readable, demo-friendly voucher code: MP-THANKS-9032AB. */
+function thanksCode(id: string): string {
+  // Job ids look like MP-9032-TA, so chars 3-6 are the job number.
+  const stem = id.slice(3, 7).replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'MPMP'
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const salt = letters[Math.floor(Math.random() * letters.length)]! + letters[Math.floor(Math.random() * letters.length)]!
+  return `MP-THANKS-${stem}${salt}`
+}
+
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const shipment = id ? await dbGetShipment(id) : undefined
@@ -43,7 +52,27 @@ export default defineEventHandler(async (event) => {
     actor: 'customer',
     note: `Customer left a ${rating}-star review${shipment.review.comment ? `: "${shipment.review.comment}"` : ''}${helpedBy ? ` · shout-out for ${helpedBy}` : ''}`
   })
+
+  // 5★ earns the thank-you voucher straight away — no CS step. Google/Facebook
+  // proof still goes through manual verification (`reward.post.ts`).
+  let rewardCode: string | undefined
+  if (rating === 5 && !shipment.review.reward) {
+    rewardCode = thanksCode(shipment.id)
+    shipment.review.reward = { code: rewardCode, at: new Date().toISOString(), value: 'Grab $10' }
+    addEvent(shipment, {
+      type: 'note',
+      actor: 'system',
+      note: `⭐ 5-star review — thank-you voucher ${rewardCode} issued automatically`
+    })
+  }
+
   await dbSaveShipment(shipment)
+
+  if (rewardCode) {
+    const email = buildRewardEmail(shipment, rewardCode)
+    await sendEmail(email)
+    await dbSaveEmail(email)
+  }
 
   return shipment
 })

@@ -1,19 +1,14 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'ops' })
 
-useHead({ title: 'Review rewards — M&P International Freights' })
+// Old deep link — the review programme now lives under /ops.
+await navigateTo('/ops/rewards', { replace: true })
 </script>
 
 <template>
   <UDashboardPanel>
-    <template #header>
-      <UDashboardNavbar title="Rewards" icon="i-lucide-gift" />
-    </template>
-
     <template #body>
-      <main class="page wide" style="max-width: none; padding: 0">
-        <RewardsDashboard />
-      </main>
+      <p class="text-sm text-zinc-500">Opening Review programme…</p>
     </template>
   </UDashboardPanel>
 </template>

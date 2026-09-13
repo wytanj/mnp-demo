@@ -48,7 +48,7 @@ const items = computed<NavigationMenuItem[][]>(() => [
   [
     { label: 'Docs vault', icon: 'i-lucide-folder-open', to: '/ops/docs' },
     { label: 'Billing / SOA', icon: 'i-lucide-receipt', to: '/ops/billing' },
-    { label: 'Rewards', icon: 'i-lucide-gift', to: '/rewards' }
+    { label: 'Review programme', icon: 'i-lucide-gift', to: '/ops/rewards' }
   ]
 ])
 </script>

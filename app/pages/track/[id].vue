@@ -486,9 +486,14 @@ const supportMailto = computed(
               <p v-if="shipment.review.helpedBy" class="muted" style="margin: 0 0 6px">
                 Shout-out passed on to {{ shipment.review.helpedBy }}.
               </p>
-              <p v-if="shipment.review.reward" style="margin: 0; font-weight: 700">
-                🎁 Reward code <span style="color: var(--blue)">{{ shipment.review.reward.code }}</span>
-              </p>
+              <div v-if="shipment.review.reward" class="trk-voucher">
+                <span class="trk-voucher-emoji">🎁</span>
+                <span>
+                  <span class="trk-voucher-v">{{ shipment.review.reward.value ?? 'Grab $10' }} voucher</span>
+                  <span class="trk-voucher-code">{{ shipment.review.reward.code }}</span>
+                  <span class="trk-voucher-note">We've emailed this to you too.</span>
+                </span>
+              </div>
               <p v-else-if="shipment.review.screenshot" class="muted" style="margin: 0">
                 Proof received — voucher on its way once verified.
               </p>
@@ -620,6 +625,27 @@ const supportMailto = computed(
 /* ---- review / claim ---- */
 .trk-review { border-color: #fbbf8f; }
 .trk-stars { color: #f59e0b; }
+.trk-voucher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid #fbbf8f;
+  background: #fffaf3;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 4px;
+}
+.trk-voucher-emoji { font-size: 22px; line-height: 1; }
+.trk-voucher-v { display: block; font-size: 12px; font-weight: 700; color: #b45309; }
+.trk-voucher-code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #7c2d12;
+}
+.trk-voucher-note { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .trk-held { border-color: #fca5a5; background: #fff8f8; }
 .trk-held h2 { color: #b91c1c; }
 .trk-err { color: #b91c1c; font-size: 13px; margin: 8px 0 0; }

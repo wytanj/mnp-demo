@@ -44,7 +44,7 @@ permit against the job. Nothing is ever auto-submitted.
 | `MP-8102-AF` | Allmighty Foods | B2C | Delivered, **review request sent**, waiting on the customer |
 | `MP-5108-HF` | Hey Fran | B2SELF | Outlet restock, picked up — clean `/track` page |
 | `MP-6220-AF` | Allmighty Foods | B2B | Busan LCL quote, booked |
-| `MP-8101-AF`, `MP-8110-AF`, `MP-8112-HF` | mixed | — | Delivered and reviewed — feed the rewards dashboard |
+| `MP-8101-AF`, `MP-8110-AF`, `MP-8112-HF` | mixed | — | Delivered and reviewed — feed the Review programme (5★ auto-voucher, proof awaiting verification) |
 
 Plus seeded quote enquiries, simulated WhatsApp threads, a partner board per job, and
 three unmatched inbound mails (tournament schedule, newsletter, vendor pitch) that fold

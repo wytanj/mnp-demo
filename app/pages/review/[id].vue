@@ -39,8 +39,6 @@ async function submit() {
         comment: comment.value.trim(),
         helpedBy: helpedBy.value.trim() || undefined,
         screenshot: screenshot.value || undefined,
-        // NOTE: review.post.ts does not read `platforms` yet — sent so the ops
-        // rewards view can pick it up once the server accepts it.
         platforms: platforms.value.length ? platforms.value : undefined
       }
     })
@@ -78,9 +76,13 @@ async function submit() {
         <p v-if="shipment.review.helpedBy" class="muted">
           We've passed your shout-out to {{ shipment.review.helpedBy }}.
         </p>
-        <p v-if="shipment.review.reward" style="font-weight: 700">
-          🎁 Your reward code: <span style="color: var(--blue)">{{ shipment.review.reward.code }}</span>
-        </p>
+        <div v-if="shipment.review.reward" class="rev-voucher">
+          <div class="rev-voucher-emoji">🎁</div>
+          <p class="rev-voucher-t">Thank you — here's a little something</p>
+          <p class="rev-voucher-v">{{ shipment.review.reward.value ?? 'Grab $10' }} voucher</p>
+          <p class="rev-voucher-code">{{ shipment.review.reward.code }}</p>
+          <p class="rev-voucher-note">We've emailed this to you too.</p>
+        </div>
         <p v-else-if="shipment.review.screenshot" class="muted">
           📸 Proof received — voucher on its way once verified.
         </p>
@@ -145,4 +147,25 @@ async function submit() {
 .rev-proof-s { margin: 2px 0 10px; font-size: 13px; color: var(--muted); }
 .rev-plats { display: flex; gap: 16px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
 .rev-plats label { display: inline-flex; align-items: center; gap: 6px; }
+.rev-voucher {
+  border: 2px solid #fbbf8f;
+  background: #fffaf3;
+  border-radius: 14px;
+  padding: 18px 16px;
+  margin: 14px auto;
+  max-width: 340px;
+  text-align: center;
+}
+.rev-voucher-emoji { font-size: 30px; line-height: 1; }
+.rev-voucher-t { margin: 6px 0 2px; font-size: 15px; font-weight: 800; }
+.rev-voucher-v { margin: 0 0 10px; font-size: 13px; font-weight: 700; color: #b45309; }
+.rev-voucher-code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #7c2d12;
+}
+.rev-voucher-note { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
 </style>

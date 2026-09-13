@@ -871,7 +871,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       at: minsAgo(60 * 16),
       screenshot: reviewShot('Melissa Tan', 5, 'On time, driver helped restack pallets. Great service!', 'Google'),
       platforms: ['google', 'facebook'],
-      reward: { code: 'MP10OFF', at: minsAgo(60 * 12), value: 'Grab $10' },
+      reward: { code: 'MP-THANKS-8101KQ', at: minsAgo(60 * 12), value: 'Grab $10' },
       helpedBy: 'Hafiz (driver)'
     },
     reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 18) }
@@ -884,7 +884,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s6, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Kumar (Receiving)', at: minsAgo(60 * 19) })
   addEvent(s6, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 19) })
   addEvent(s6, { type: 'note', actor: 'customer', note: 'Customer left a 5-star review: "On time, driver helped restack pallets. Great service!"', at: minsAgo(60 * 16) })
-  addEvent(s6, { type: 'note', actor: 'cs', note: 'Review approved — reward code MP10OFF emailed to customer', at: minsAgo(60 * 12) })
+  addEvent(s6, { type: 'note', actor: 'system', note: '⭐ 5-star review — thank-you voucher MP-THANKS-8101KQ issued automatically', at: minsAgo(60 * 12) })
 
   const s7: Shipment = {
     id: 'MP-8110-AF',
@@ -983,7 +983,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       at: minsAgo(60 * 44),
       screenshot: reviewShot('Fran Lim', 5, 'Van arrived before opening — stock was on the floor in 15 minutes.', 'Facebook'),
       platforms: ['facebook'],
-      reward: { code: 'GRAB10-HF', at: minsAgo(60 * 40), value: 'Grab $10' },
+      reward: { code: 'MP-THANKS-8112RD', at: minsAgo(60 * 40), value: 'Grab $10' },
       helpedBy: 'Azlan (driver)'
     },
     reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 46) }
@@ -996,7 +996,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s9, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Fran Lim', at: minsAgo(60 * 47) })
   addEvent(s9, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 47) })
   addEvent(s9, { type: 'note', actor: 'customer', note: 'Customer left a 5-star review: "Van arrived before opening — stock was on the floor in 15 minutes."', at: minsAgo(60 * 44) })
-  addEvent(s9, { type: 'note', actor: 'cs', note: 'Review approved — reward code GRAB10-HF emailed to customer', at: minsAgo(60 * 40) })
+  addEvent(s9, { type: 'note', actor: 'system', note: '⭐ 5-star review — thank-you voucher MP-THANKS-8112RD issued automatically', at: minsAgo(60 * 40) })
 
   // Delivered but NOT clean — open damage claim suppresses the review ask
   const s10: Shipment = {
@@ -1353,11 +1353,11 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   const emails: OutboxEmail[] = [
     ...[s1, s2, s3, s5, s6, s7, s8, s9, s10, s11, s12, s13].map((s) => buildTrackingEmail(s, s.createdAt)),
     buildReviewEmail(s6, minsAgo(60 * 18)),
-    buildRewardEmail(s6, 'MP10OFF', minsAgo(60 * 12)),
+    buildRewardEmail(s6, 'MP-THANKS-8101KQ', minsAgo(60 * 12)),
     buildReviewEmail(s7, minsAgo(60 * 26)),
     buildReviewEmail(s8, minsAgo(60 * 4)),
     buildReviewEmail(s9, minsAgo(60 * 46)),
-    buildRewardEmail(s9, 'GRAB10-HF', minsAgo(60 * 40)),
+    buildRewardEmail(s9, 'MP-THANKS-8112RD', minsAgo(60 * 40)),
     buildReviewEmail(s12, minsAgo(60 * 2)),
     // Titan: CS chased the packing list, WY replied asking for the arrival notice — needs a reply
     buildCsReplyEmail({

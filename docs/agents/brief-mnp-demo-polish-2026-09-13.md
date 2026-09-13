@@ -47,3 +47,29 @@ Fable orchestrates; Opus implements. Done webhook if available; otherwise push +
 - Rewards page feels demo-ready (or folded into Reviews)
 - How-to `?` top-right on every nav page
 - Push to existing PR
+
+## PRIORITY LOCK (Felicia 2026-09-13 later)
+
+**Most important demo wedges — make EXTENSIVE (many features, not redundant):**
+
+### 1) Review / reward automation (ops + customer)
+Depth targets (seeded, clickable, Nuxt UI):
+- Ops Reviews board: pending asks, held (claim open), sent, received, suppress, release, 48h re-ask
+- Claim/hold gate: unhappy customer never gets review ask mid-claim
+- Reward programme page (redo `/rewards`): codes issued on 5★, pending claim of reward, Google/FB platform proof, flyer/outbox emails simulated
+- Customer `/review/[id]`: stars → thank-you → voucher if 5★; portal POD/review list of “to leave”
+- Agent desk hooks: “draft review ask”, “hold because claim”, “issue reward”
+- Timeline events on the job when ask/hold/reward fires
+- Do NOT duplicate the same list three times — one source of truth, Reviews + thin programme page + customer thank-you
+
+### 2) Customs declarations automation
+Depth targets:
+- Customs queue with statuses (needs data, draft declaration, submitted, queried, cleared)
+- Job → declaration form prefill from shipment (HS, weight, consignee, invoice lines) — editable demo fields
+- Agent/Grok assist: “fill from docs”, “flag missing permit”, WhatsApp/email nudge copy
+- Document checklist per declaration (invoice, packing list, permit)
+- Partner handoff to broker (link to trade partners on that job)
+- Exception when blocked on permit (ties to partners blocked chip)
+- Avoid a second customs UI elsewhere — deepen `/ops/customs` + `/ops/customs/[id]` only
+
+Partners/billing/how-to still ship, but **spend most Opus time on (1) and (2)**. Thin polish elsewhere.

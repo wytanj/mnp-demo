@@ -3,7 +3,7 @@ definePageMeta({ layout: 'ops' })
 
 type ExceptionKind =
   | 'stuck' | 'eta_passed' | 'customs_gap' | 'claim_open'
-  | 'partner_blocked' | 'needs_reply' | 'signoff_pending'
+  | 'partner_blocked' | 'permit_blocked' | 'needs_reply' | 'signoff_pending'
 
 interface OpsException {
   id: string
@@ -33,6 +33,7 @@ const KIND_META: Record<ExceptionKind, { label: string; icon: string }> = {
   customs_gap: { label: 'Customs gap', icon: 'i-lucide-stamp' },
   claim_open: { label: 'Claim', icon: 'i-lucide-shield-alert' },
   partner_blocked: { label: 'Partner blocked', icon: 'i-lucide-handshake' },
+  permit_blocked: { label: 'Blocked on permit', icon: 'i-lucide-file-lock-2' },
   needs_reply: { label: 'Needs reply', icon: 'i-lucide-message-square-dot' },
   signoff_pending: { label: 'Sign-off pending', icon: 'i-lucide-signature' }
 }

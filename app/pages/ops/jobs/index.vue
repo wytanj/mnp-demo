@@ -150,6 +150,7 @@ function customsBadge(s: Shipment): { label: string; color: 'success' | 'warning
   if (c.status === 'docs_pending') return { label: CUSTOMS_LABELS.docs_pending, color: 'warning' }
   if (c.status === 'ready_for_declaration') return { label: CUSTOMS_LABELS.ready_for_declaration, color: 'info' }
   if (c.status === 'declared') return { label: 'Declared', color: 'success' }
+  if (c.status === 'queried') return { label: 'Customs query', color: 'warning' }
   return { label: 'Cleared', color: 'success' }
 }
 

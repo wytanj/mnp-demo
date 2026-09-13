@@ -8,7 +8,7 @@ export default defineEventHandler(async () => {
   const requests = listQuoteRequests()
 
   const customsQueue = shipments.filter(
-    (s) => s.customs && (s.customs.status === 'docs_pending' || s.customs.status === 'ready_for_declaration')
+    (s) => s.customs && (s.customs.status === 'docs_pending' || s.customs.status === 'ready_for_declaration' || s.customs.status === 'queried')
   )
   const partnerWaits = shipments.reduce(
     (n, s) => n + (s.partners ?? []).filter((p) => p.state === 'waiting' || p.state === 'blocked').length,

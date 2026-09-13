@@ -2,9 +2,11 @@
 import { docsDone, type DocumentCategory, type Shipment, type ShipmentDocument } from '#shared/utils/shipping'
 
 // customer mode: upload + view only. cs mode adds the Verify action.
-const props = withDefaults(defineProps<{ shipment: Shipment; mode?: 'customer' | 'cs' }>(), {
-  mode: 'customer'
-})
+// showGaps: name the customs gap each missing document causes (declaration desk).
+const props = withDefaults(
+  defineProps<{ shipment: Shipment; mode?: 'customer' | 'cs'; showGaps?: boolean }>(),
+  { mode: 'customer', showGaps: false }
+)
 const emit = defineEmits<{ refresh: [] }>()
 
 const fileInput = ref<HTMLInputElement>()
@@ -85,6 +87,18 @@ async function approve(key: string) {
   }
 }
 
+/**
+ * What a missing document actually blocks. The permit is the *output* of the
+ * filing, so it never shows as an input gap — it blocks the CFS instead.
+ */
+function gapCaused(d: ShipmentDocument): string {
+  if (!props.showGaps || !d.required) return ''
+  if (d.status === 'approved' || d.status === 'waived') return ''
+  if (d.category !== 'customs') return ''
+  if (d.key === 'permit') return 'Blocks the CFS unstuff — the permit comes back once an officer files on TradeNet'
+  return `Blocks TradeNet filing — gap “Document: ${d.label}”`
+}
+
 function deadlineClass(d: ShipmentDocument): string {
   if (!d.deadline || d.status === 'approved' || d.status === 'uploaded') return ''
   return new Date(d.deadline).getTime() - Date.now() < 48 * 3600_000 ? 'due-soon' : ''
@@ -136,6 +150,7 @@ const STATUS_PILLS: Record<string, { label: string; cls: string }> = {
             <span v-if="d.deadline && d.status === 'pending'" class="deadline">due {{ fmtDeadline(d.deadline) }}</span>
             <span v-if="d.uploadedBy && d.status !== 'pending'" class="muted">by {{ d.uploadedBy }}</span>
           </div>
+          <div v-if="gapCaused(d)" class="doc-gap">{{ gapCaused(d) }}</div>
           <div v-if="d.note" class="qnote">{{ d.note }}</div>
         </div>
         <div class="doc-actions">
@@ -183,4 +198,11 @@ const STATUS_PILLS: Record<string, { label: string; cls: string }> = {
   letter-spacing: 0;
 }
 .doc-list .doc-received { border: 1px solid var(--line); }
+.doc-list .doc-gap {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #b45309;
+  margin-top: 3px;
+}
 </style>

@@ -621,6 +621,46 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     weightKg: 5078,
     description: 'Jelly-filled cartons ×375 + 1 pallet spare flat cartons — 10.971 m³ / 4,687.5 kg',
     events: [],
+    // Filed ahead of arrival, then Singapore Customs came back with a question —
+    // the officer answers it on TradeNet, nothing about this is automatic.
+    customs: {
+      required: true,
+      status: 'queried',
+      declaredBy: 'Joreen (M&P Customs)',
+      declaredAt: minsAgo(60 * 9),
+      permitNo: 'IN-2026-09-062204',
+      queriedAt: minsAgo(60 * 3),
+      queryNote: 'Singapore Customs: HS code 1704.90 vs description mismatch — confirm jelly confectionery vs fruit preparation, and re-state the FOB value used.',
+      note: 'Customs query open — Joreen (M&P Customs) to respond on TradeNet',
+      declaration: {
+        declarationType: 'IN',
+        hsCode: '1704.90.90',
+        cargoValue: 3943,
+        currency: 'SGD',
+        countryOfOrigin: 'KR — Republic of Korea',
+        importerUEN: '201422319R',
+        importerName: 'Allmighty Foods Pte Ltd',
+        permitType: 'IN-PAYMENT (GST)',
+        vesselName: 'SUNNY CALLA',
+        voyage: '2411S',
+        blNo: 'SJLSIN-6220114',
+        portOfLoading: 'KRPUS — Busan',
+        portOfDischarge: 'SGSIN — Keppel Distripark',
+        packages: 376,
+        grossWeightKg: 5078,
+        description: 'Jelly-filled cartons, retail packed, food grade',
+        incoterms: 'EXW',
+        filedBy: 'Joreen (M&P Customs)',
+        filedAt: minsAgo(60 * 9),
+        permitNo: 'IN-2026-09-062204'
+      }
+    },
+    documents: [
+      { key: 'hbl', label: 'House bill of lading', required: true, category: 'customs', status: 'approved', fileName: 'HBL-SJL-6220114.pdf', uploadedBy: 'Sunjin Logis', verifiedBy: 'Joreen (M&P Customs)', at: minsAgo(60 * 12) },
+      { key: 'cinv', label: 'Commercial invoice', required: true, category: 'customs', status: 'approved', fileName: 'INV-AF-6220.pdf', uploadedBy: 'Allmighty Foods', verifiedBy: 'Joreen (M&P Customs)', at: minsAgo(60 * 12) },
+      { key: 'plist', label: 'Packing list', required: true, category: 'customs', status: 'approved', fileName: 'PL-AF-6220.pdf', uploadedBy: 'Allmighty Foods', verifiedBy: 'Joreen (M&P Customs)', at: minsAgo(60 * 12) },
+      { key: 'permit', label: 'Import permit (TradeNet)', required: true, category: 'customs', status: 'approved', fileName: 'permit-MP-6220-AF.pdf', uploadedBy: 'Joreen (M&P Customs)', at: minsAgo(60 * 9), note: 'Filed on TradeNet by Joreen — query raised against it by Singapore Customs' }
+    ],
     quote: {
       ref: 'QT-6220',
       title: 'Sea Freight Import — LCL ex-Korea',
@@ -712,6 +752,8 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s4, { type: 'created', actor: 'cs', note: 'Enquiry received — quotation QT-6220 shared with Allmighty Foods', at: minsAgo(60 * 49) })
   addEvent(s4, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 49) })
   addEvent(s4, { type: 'note', actor: 'cs', note: 'Awaiting confirmation — FCL 20ft comparison in progress', at: minsAgo(60 * 4) })
+  addEvent(s4, { type: 'customs', actor: 'cs', note: '🛃 Declaration filed on TradeNet by Joreen (M&P Customs) · permit IN-2026-09-062204', at: minsAgo(60 * 9) })
+  addEvent(s4, { type: 'customs', actor: 'cs', note: '🛃 Customs query raised — Singapore Customs: HS code 1704.90 vs description mismatch — confirm jelly confectionery vs fruit preparation, and re-state the FOB value used.', at: minsAgo(60 * 3) })
 
   // Scenario 5 — B2B LCL import ex-Hong Kong for Mecha (mecha.store)
   const s5: Shipment = {
@@ -1162,8 +1204,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       }
     ],
     createdAt: minsAgo(60 * 11),
-    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 3) },
-    reviewAsk: { state: 'sent', trigger: 'delivered', at: minsAgo(60 * 2) }
+    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 3) }
   }
   addEvent(s12, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 11) })
   addEvent(s12, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 11) })
@@ -1173,7 +1214,6 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s12, { type: 'note', actor: 'driver', note: 'Nobody home — customer asked for after 7pm, moved to last stop', at: minsAgo(335) })
   addEvent(s12, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Priya Nair', at: minsAgo(60 * 3) })
   addEvent(s12, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 3) })
-  addEvent(s12, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 2) })
 
   // Scenario 13 — delivered but disputed: Jewel charged an after-hours bay fee that
   // Hey Fran says was never quoted. Open claim → review ask held.

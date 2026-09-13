@@ -35,6 +35,9 @@ function cleanDeclaration(input: unknown): CustomsDeclaration {
  * POST { action: 'mark_ready' | 'mark_declared' | 'mark_cleared', by, permitNo? }
  *    | { action: 'save_declaration', declaration }
  *    | { action: 'submit_demo', by }
+ *    | { action: 'flag_permit', by, note? }
+ *    | { action: 'raise_query', queryNote, by? }
+ *    | { action: 'respond_query', by, note? }
  */
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -175,6 +178,93 @@ export default defineEventHandler(async (event) => {
     return shipment
   }
 
+  if (action === 'flag_permit') {
+    const officer = by || 'M&P Customs'
+    const docs = (shipment.documents ??= [])
+    let permit = docs.find((d) => d.key === 'permit')
+    if (!permit) {
+      permit = {
+        key: 'permit',
+        label: 'Import permit (TradeNet)',
+        required: true,
+        category: 'customs',
+        status: 'pending'
+      } as ShipmentDocument
+      docs.push(permit)
+    }
+    if (permit.status !== 'approved') {
+      permit.status = 'pending'
+      permit.note = `Flagged missing by M&P — ${officer} to file on TradeNet and record the permit`
+      permit.at = at
+    }
+
+    // Who downstream is standing still because the permit is not on the job yet.
+    const blocked = (shipment.partners ?? []).find(
+      (p) => p.state === 'blocked' && (p.role === 'warehouse' || p.role === 'haulier')
+    )
+    const linkage = blocked ? `${blocked.name} is blocked on this permit` : ''
+
+    customs.note = [
+      `Permit outstanding — flagged for ${officer}`,
+      linkage
+    ].filter(Boolean).join(' · ')
+    shipment.customs = customs
+
+    const extra = String(body?.note ?? '').trim()
+    addEvent(shipment, {
+      type: 'customs',
+      actor: 'cs',
+      note: `⚠ Permit missing — flagged for ${officer}${linkage ? ` · ${linkage}` : ''}${extra ? ` · ${extra}` : ''}`,
+      internal: true,
+      at
+    })
+    await dbSaveShipment(shipment)
+    return { ok: true, flaggedFor: officer, blockedPartner: blocked ?? null, customs, shipment }
+  }
+
+  if (action === 'raise_query') {
+    const queryNote = String(body?.queryNote ?? '').trim()
+    if (!queryNote) {
+      throw createError({ statusCode: 400, statusMessage: 'queryNote (what Customs asked) is required' })
+    }
+    customs.status = 'queried'
+    customs.queriedAt = at
+    customs.queryNote = queryNote
+    customs.respondedAt = undefined
+    customs.note = `Customs query open — ${customs.declaredBy ?? (by || 'our customs officer')} to respond`
+    shipment.customs = customs
+
+    addEvent(shipment, {
+      type: 'customs',
+      actor: 'cs',
+      note: `🛃 Customs query raised — ${queryNote}`,
+      at
+    })
+    await dbSaveShipment(shipment)
+    return { ok: true, customs, shipment }
+  }
+
+  if (action === 'respond_query') {
+    if (!by) {
+      throw createError({ statusCode: 400, statusMessage: 'by (M&P customs officer name) is required' })
+    }
+    const reply = String(body?.note ?? '').trim()
+    customs.status = 'declared'
+    customs.respondedAt = at
+    customs.declaredBy = customs.declaredBy ?? by
+    customs.note = `Query answered on TradeNet by ${by}${reply ? ` — ${reply}` : ''}`
+    shipment.customs = customs
+
+    addEvent(shipment, {
+      type: 'customs',
+      actor: 'cs',
+      note: `🛃 Customs query answered by ${by}${reply ? ` — ${reply}` : ''} · declaration back with Singapore Customs`,
+      at
+    })
+    await dbSaveShipment(shipment)
+    return { ok: true, customs, shipment }
+  }
+
   if (action === 'mark_cleared') {
     if (!by) {
       throw createError({ statusCode: 400, statusMessage: 'by (M&P customs officer name) is required' })
@@ -208,6 +298,6 @@ export default defineEventHandler(async (event) => {
 
   throw createError({
     statusCode: 400,
-    statusMessage: "action must be 'save_declaration', 'submit_demo', 'mark_ready', 'mark_declared' or 'mark_cleared'"
+    statusMessage: "action must be 'save_declaration', 'submit_demo', 'mark_ready', 'mark_declared', 'mark_cleared', 'flag_permit', 'raise_query' or 'respond_query'"
   })
 })

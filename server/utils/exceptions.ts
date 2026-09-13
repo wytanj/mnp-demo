@@ -15,8 +15,21 @@ export type ExceptionKind =
   | 'customs_gap'
   | 'claim_open'
   | 'partner_blocked'
+  | 'permit_blocked'
   | 'needs_reply'
   | 'signoff_pending'
+
+/** Label per kind — the ops exceptions page renders its own copy of this map. */
+export const EXCEPTION_KIND_LABELS: Record<ExceptionKind, string> = {
+  stuck: 'Stuck',
+  eta_passed: 'ETA passed',
+  customs_gap: 'Customs gap',
+  claim_open: 'Claim',
+  partner_blocked: 'Partner blocked',
+  permit_blocked: 'Blocked on permit',
+  needs_reply: 'Needs reply',
+  signoff_pending: 'Sign-off pending'
+}
 
 export interface OpsException {
   id: string
@@ -118,6 +131,32 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
         since: s.claim.openedAt,
         link
       })
+    }
+
+    // A blocked CFS / haulier on a job whose permit is not on the file yet is
+    // a customs problem, not a partner problem — it is fixed on the declaration.
+    if (s.customs && s.customs.status !== 'cleared' && s.customs.status !== 'declared') {
+      const stuckOnPermit = (s.partners ?? []).find(
+        (p) => p.state === 'blocked' && (p.role === 'warehouse' || p.role === 'haulier')
+      )
+      if (stuckOnPermit) {
+        const gaps = declarationGaps(s)
+        out.push({
+          id: `${s.id}-permit`,
+          shipmentId: s.id,
+          client,
+          kind: 'permit_blocked',
+          severity: 'high',
+          title: `Blocked on permit — ${stuckOnPermit.name}`,
+          detail: `${stuckOnPermit.name} cannot unstuff without the import permit. ${
+            gaps.length
+              ? `Still missing before an M&P officer can file on TradeNet: ${gaps.join(', ')}.`
+              : 'The declaration has no gaps left — it is waiting on an M&P customs officer to file on TradeNet.'
+          }`,
+          since: stuckOnPermit.since ?? lastEventAt(s),
+          link: `/ops/customs/${s.id}`
+        })
+      }
     }
 
     for (const p of s.partners ?? []) {

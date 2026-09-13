@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import {
+  CUSTOMS_LABELS,
   DECLARATION_LABELS,
   DECLARATION_REQUIRED,
+  HS_HINTS,
+  PREFILL_SOURCES,
   customsDocs,
+  prefillDeclaration,
   type CustomsDeclaration,
+  type PartnerStatus,
   type Shipment
 } from '#shared/utils/shipping'
 
@@ -124,78 +129,71 @@ const CURRENCIES = ['USD', 'SGD', 'CNY', 'HKD', 'EUR', 'KRW']
 const INCOTERMS = ['EXW', 'FOB', 'CIF', 'CFR', 'DAP', 'DDP']
 const OFFICERS = ['Joreen (M&P Customs)', 'Kelvin (M&P Customs)']
 
-const HS_HINTS = [
-  { code: '8471.60.70', label: 'Keyboards & other input units', match: /keyboard|mouse|input unit/i },
-  { code: '1106.20.00', label: 'Flour & meal of roots (konjac)', match: /konjac|flour|oat|starch/i },
-  { code: '2007.99.90', label: 'Jellies, jams & fruit purée', match: /jelly|jellies|gumm|candy|snack/i }
-]
-
 const officer = ref(OFFICERS[0]!)
 
-/* ── prefill ─────────────────────────────────────────────── */
-
-function guessCountry(origin: string): string {
-  const o = origin.toLowerCase()
-  if (/hong kong|kowloon|hkg/.test(o)) return 'HK — Hong Kong SAR'
-  if (/shenzhen|yantian|shanghai|ningbo|china|cnsz/.test(o)) return 'CN — China'
-  if (/busan|korea|krpus/.test(o)) return 'KR — Republic of Korea'
-  if (/taiwan|kaohsiung/.test(o)) return 'TW — Taiwan'
-  if (/singapore|senoko|tuas|psa/.test(o)) return 'SG — Singapore'
-  return 'CN — China'
-}
-
-function guessHs(description: string): string {
-  return HS_HINTS.find((h) => h.match.test(description))?.code ?? '3926.90.99'
-}
-
-function guessValue(j: Shipment): number {
-  const lump = j.quote?.lumpSum?.amount
-  if (lump) return Math.round(lump)
-  return Math.max(1200, Math.round((j.weightKg || 100) * 48 / 10) * 10)
-}
+/* ── prefill (suggestions only — a person still files) ───── */
 
 const prefilling = ref(false)
 
-/**
- * Demo convenience: fill the draft from what the job already knows (B/L,
- * booking, cargo description) and mark the outstanding customs documents as
- * received, so the officer can key in and file in two clicks on stage.
- */
-async function prefill() {
+/** Write the suggested values into every field the officer has left empty. */
+function applyPrefill(): Array<{ key: keyof CustomsDeclaration; label: string; value: string; source: string }> {
   const j = s.value
-  if (!j) return
+  if (!j) return []
+  const suggestion = prefillDeclaration(j)
+  const added: Array<{ key: keyof CustomsDeclaration; label: string; value: string; source: string }> = []
+  for (const [k, value] of Object.entries(suggestion) as Array<[keyof CustomsDeclaration, string | number | undefined]>) {
+    if (value === undefined || value === '') continue
+    if (isFilled(k)) continue
+    form[k] = value
+    added.push({
+      key: k,
+      label: DECLARATION_LABELS[k],
+      value: String(value),
+      source: PREFILL_SOURCES[k] ?? 'Job file'
+    })
+  }
+  return added
+}
+
+/** "Fill from job" — booking, B/L details and quotation. Fields stay editable. */
+function fillFromJob() {
+  if (!s.value) return
   prefilling.value = true
   try {
-    const vessel = /\(([A-Z][A-Z \-]+?)\s+V\.?\s*([A-Z0-9]+)\)/.exec(j.description)
-    const guesses: Partial<Record<keyof CustomsDeclaration, string | number>> = {
-      declarationType: 'IN',
-      permitType: 'IN-PAYMENT (GST)',
-      hsCode: guessHs(j.description),
-      cargoValue: guessValue(j),
-      currency: 'USD',
-      countryOfOrigin: guessCountry(j.origin),
-      importerUEN: '201512345K',
-      importerName: j.company ?? j.customerName,
-      vesselName: vessel?.[1]?.trim(),
-      voyage: vessel?.[2],
-      blNo: j.poNumber,
-      portOfLoading: `${j.origin.split(',')[0]}`.trim(),
-      portOfDischarge: 'SGSIN — Singapore',
-      packages: j.pieces,
-      grossWeightKg: j.weightKg,
-      description: j.description.replace(/\s*\([^)]*\)\s*$/, '').trim(),
-      incoterms: j.incoterms
-    }
+    const added = applyPrefill()
+    toast.add({
+      title: added.length
+        ? `Prefilled ${added.length} field${added.length === 1 ? '' : 's'} — check before filing`
+        : 'Nothing left to prefill',
+      description: added.length
+        ? added.map((a) => a.label).join(', ')
+        : 'Every field the job knows about is already keyed in.',
+      color: 'primary',
+      icon: 'i-lucide-wand-sparkles'
+    })
+  } finally {
+    prefilling.value = false
+  }
+}
 
-    const added: string[] = []
-    for (const [key, value] of Object.entries(guesses) as Array<[keyof CustomsDeclaration, string | number | undefined]>) {
-      if (value === undefined || value === '') continue
-      if (isFilled(key)) continue
-      form[key] = value
-      added.push(DECLARATION_LABELS[key])
-    }
+/* ── agent assist — suggestions only, a person files ─────── */
 
-    // Documents are what the prefill claims to read from — mark them received.
+type AssistTask = '' | 'docs' | 'permit' | 'nudge'
+const assistBusy = ref<AssistTask>('')
+const assistSources = ref<Array<{ label: string; value: string; source: string }>>([])
+const permitFlag = ref<{ flaggedFor: string; blockedPartner: PartnerStatus | null } | null>(null)
+const nudgeOpen = ref(false)
+
+/** "Fill from docs" — same prefill, and it says which document each value came from. */
+async function fillFromDocs() {
+  const j = s.value
+  if (!j) return
+  assistBusy.value = 'docs'
+  try {
+    const added = applyPrefill()
+    assistSources.value = added.map(({ label, value, source }) => ({ label, value, source }))
+
+    // The documents the read claims to come from — mark them received (demo).
     const docs = [...pendingDocs.value]
     for (const d of docs) {
       await $fetch(`/api/shipments/${id.value}/documents`, {
@@ -206,16 +204,165 @@ async function prefill() {
     if (docs.length) await refresh()
 
     toast.add({
-      title: added.length ? `Pre-filled ${added.length} field${added.length === 1 ? '' : 's'}` : 'Nothing left to pre-fill',
-      description: [
-        added.length ? added.join(', ') : 'Every required field was already keyed in.',
-        docs.length ? `Marked received: ${docs.map((d) => d.label).join(', ')}.` : ''
-      ].filter(Boolean).join(' '),
+      title: added.length
+        ? `Prefilled ${added.length} field${added.length === 1 ? '' : 's'} — check before filing`
+        : 'Nothing left to prefill',
+      description: docs.length
+        ? `Marked received: ${docs.map((d) => d.label).join(', ')}. Every value is a suggestion — the officer checks it.`
+        : 'Every value is a suggestion — the officer checks it against the file.',
       color: 'primary',
-      icon: 'i-lucide-wand-sparkles'
+      icon: 'i-lucide-file-search'
     })
   } finally {
-    prefilling.value = false
+    assistBusy.value = ''
+  }
+}
+
+/** "Flag missing permit" — writes the gap onto the job and names who is stuck on it. */
+async function flagPermit() {
+  if (!s.value) return
+  assistBusy.value = 'permit'
+  try {
+    const res = await $fetch<{ flaggedFor: string; blockedPartner: PartnerStatus | null }>(
+      `/api/shipments/${id.value}/customs`,
+      { method: 'POST', body: { action: 'flag_permit', by: officer.value } }
+    )
+    permitFlag.value = { flaggedFor: res.flaggedFor, blockedPartner: res.blockedPartner ?? null }
+    await refresh()
+    toast.add({
+      title: `Permit flagged for ${res.flaggedFor}`,
+      description: res.blockedPartner
+        ? `${res.blockedPartner.name} is blocked on this permit — it is on the job timeline now.`
+        : 'Noted on the job timeline.',
+      color: 'warning',
+      icon: 'i-lucide-flag'
+    })
+  } finally {
+    assistBusy.value = ''
+  }
+}
+
+/* ── draft nudge (chase copy — nothing is sent from here) ── */
+
+const missingList = computed(() => {
+  const docs = pendingDocs.value.map((d) => d.label)
+  const fields = fieldChecks.value.filter((c) => !c.ok).map((c) => c.label)
+  return { docs, fields }
+})
+
+const nudgeWhatsApp = computed(() => {
+  const j = s.value
+  if (!j) return ''
+  const first = (j.customerName ?? '').split(' ')[0] || 'there'
+  const { docs, fields } = missingList.value
+  const wants = [...docs, ...fields.map((f) => f.toLowerCase())]
+  return [
+    `Hi ${first}, M&P here on ${j.id} (${j.origin.split(',')[0]} → ${j.destination.split(',')[0]}).`,
+    wants.length
+      ? `Before ${officer.value.split(' ')[0]} can file the import declaration on TradeNet we still need: ${wants.join(', ')}.`
+      : 'Everything we need is in — the declaration goes to TradeNet next.',
+    'Can you send them across today? Vessel ETA is close and the CFS slot depends on the permit.',
+    'Thanks! — M&P International Freights'
+  ].join(' ')
+})
+
+const nudgeEmail = computed(() => {
+  const j = s.value
+  if (!j) return ''
+  const { docs, fields } = missingList.value
+  return [
+    `Subject: ${j.id} — documents outstanding before customs declaration`,
+    '',
+    `Dear ${j.customerName},`,
+    '',
+    `We are preparing the import declaration for ${j.id} (${j.description}).`,
+    docs.length ? `Still outstanding from your side: ${docs.join(', ')}.` : '',
+    fields.length ? `We also need to confirm: ${fields.join(', ')}.` : '',
+    '',
+    `Once these are with us, ${officer.value} files the declaration on TradeNet and the permit number goes onto your tracking page.`,
+    '',
+    'Kind regards,',
+    'M&P International Freights'
+  ].filter((l) => l !== undefined).join('\n')
+})
+
+function draftNudge() {
+  nudgeOpen.value = true
+}
+
+async function copyNudge(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.add({ title: 'Copied', description: 'Paste it into WhatsApp or the inbox reply.', color: 'success', icon: 'i-lucide-copy-check' })
+  } catch {
+    toast.add({ title: 'Could not copy', description: 'Select the text and copy it manually.', color: 'warning', icon: 'i-lucide-copy-x' })
+  }
+}
+
+/* ── broker handoff ──────────────────────────────────────── */
+
+const broker = computed(() => (s.value?.partners ?? []).find((p) => p.role === 'broker'))
+const blockedPartner = computed(() =>
+  (s.value?.partners ?? []).find((p) => p.state === 'blocked' && (p.role === 'warehouse' || p.role === 'haulier'))
+)
+const handingOver = ref(false)
+
+const PARTNER_STATE_DOT: Record<string, string> = {
+  ok: 'bg-emerald-500',
+  waiting: 'bg-amber-500',
+  blocked: 'bg-red-500',
+  done: 'bg-zinc-400',
+  na: 'bg-zinc-300'
+}
+
+async function handToBroker() {
+  if (!s.value) return
+  handingOver.value = true
+  try {
+    await $fetch(`/api/shipments/${id.value}/partners`, {
+      method: 'POST',
+      body: {
+        role: 'broker',
+        state: 'waiting',
+        name: broker.value?.name ?? officer.value,
+        waitingFor: 'Declaration pack handed over — filing on TradeNet',
+        note: `Handed over by ${officer.value} from the declaration desk`
+      }
+    })
+    await refresh()
+    toast.add({
+      title: 'Handed to the broker',
+      description: `${broker.value?.name ?? officer.value} has the declaration pack — filing on TradeNet next.`,
+      color: 'success',
+      icon: 'i-lucide-handshake'
+    })
+  } finally {
+    handingOver.value = false
+  }
+}
+
+/* ── customs query ───────────────────────────────────────── */
+
+const responding = ref(false)
+const queried = computed(() => customs.value?.status === 'queried')
+
+async function respondQuery() {
+  if (!s.value) return
+  responding.value = true
+  try {
+    await $fetch(`/api/shipments/${id.value}/customs`, {
+      method: 'POST',
+      body: { action: 'respond_query', by: officer.value, note: 'Reply keyed into TradeNet with the supporting documents' }
+    })
+    await refresh()
+    toast.add({
+      title: 'Query answered',
+      description: `${officer.value} responded on TradeNet — back with Singapore Customs.`,
+      color: 'success',
+      icon: 'i-lucide-message-square-reply'
+    })
+  } finally {
+    responding.value = false
   }
 }
 
@@ -318,10 +465,10 @@ function when(iso?: string): string {
             size="sm"
             icon="i-lucide-wand-sparkles"
             :loading="prefilling"
-            @click="prefill()"
+            @click="fillFromJob()"
           >
-            <span class="hidden md:inline">Pre-fill from documents (demo)</span>
-            <span class="md:hidden">Pre-fill</span>
+            <span class="hidden md:inline">Fill from job</span>
+            <span class="md:hidden">Fill</span>
           </UButton>
         </template>
       </UDashboardNavbar>
@@ -351,6 +498,27 @@ function when(iso?: string): string {
           title="Declared on TradeNet"
           :description="`Filed by ${customs?.declaredBy ?? officer} on ${when(customs?.declaredAt)} · permit ${customs?.permitNo ?? '—'}`"
         />
+
+        <UAlert
+          v-if="queried"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-message-square-warning"
+          :title="CUSTOMS_LABELS.queried"
+          :description="customs?.queryNote ?? 'Singapore Customs raised a query on this declaration.'"
+        >
+          <template #actions>
+            <UButton
+              color="error"
+              size="sm"
+              icon="i-lucide-message-square-reply"
+              :loading="responding"
+              @click="respondQuery()"
+            >
+              Respond as {{ officer.split(' ')[0] }}
+            </UButton>
+          </template>
+        </UAlert>
 
         <UAlert
           v-if="submitError"
@@ -505,7 +673,7 @@ function when(iso?: string): string {
                     color="primary"
                     icon="i-lucide-send"
                     :loading="submitting"
-                    :disabled="filed"
+                    :disabled="filed || queried"
                     @click="submitDemo()"
                   >
                     Submit to TradeNet (demo)
@@ -549,6 +717,157 @@ function when(iso?: string): string {
               </p>
             </UCard>
 
+            <!-- ── agent assist — suggestions only ──────── -->
+            <UCard :ui="{ header: 'p-4 sm:px-4', body: 'p-4 sm:p-4' }">
+              <template #header>
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-lucide-sparkles" class="size-4 text-primary" />
+                  <h3 class="text-sm font-bold flex-1">Assist — suggestions only, a person files</h3>
+                </div>
+              </template>
+
+              <div class="flex flex-wrap gap-2">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-file-search"
+                  :loading="assistBusy === 'docs'"
+                  @click="fillFromDocs()"
+                >
+                  Fill from docs
+                </UButton>
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-flag"
+                  :loading="assistBusy === 'permit'"
+                  @click="flagPermit()"
+                >
+                  Flag missing permit
+                </UButton>
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-message-square-plus"
+                  @click="draftNudge()"
+                >
+                  Draft nudge
+                </UButton>
+              </div>
+
+              <!-- where each suggested value came from -->
+              <div v-if="assistSources.length" class="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                <div class="text-[11px] font-bold uppercase tracking-wide text-zinc-500 mb-1.5">
+                  Read from the file ({{ assistSources.length }})
+                </div>
+                <ul class="space-y-1">
+                  <li v-for="a in assistSources" :key="a.label" class="text-[12px] leading-snug">
+                    <span class="font-semibold text-zinc-800">{{ a.label }}</span>
+                    <span class="text-zinc-600"> — {{ a.value }}</span>
+                    <span class="block text-[11px] text-zinc-500">source: {{ a.source }}</span>
+                  </li>
+                </ul>
+                <p class="mt-2 text-[11px] text-zinc-500">
+                  Suggestions. Nothing is submitted — {{ officer.split(' ')[0] }} checks each line and files on TradeNet.
+                </p>
+              </div>
+
+              <!-- permit flag result -->
+              <div v-if="permitFlag" class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p class="text-[12px] font-semibold text-amber-900">
+                  ⚠ Permit missing — flagged for {{ permitFlag.flaggedFor }}
+                </p>
+                <p v-if="permitFlag.blockedPartner" class="text-[12px] text-amber-800 mt-1">
+                  {{ permitFlag.blockedPartner.name }} is blocked on this permit.
+                  <NuxtLink to="/ops/partners" class="font-semibold underline">Trade partners</NuxtLink>
+                </p>
+              </div>
+              <div
+                v-else-if="blockedPartner"
+                class="mt-3 text-[12px] text-red-700 leading-snug"
+              >
+                <UIcon name="i-lucide-octagon-alert" class="size-3.5 align-[-2px]" />
+                {{ blockedPartner.name }} is blocked without this permit.
+              </div>
+
+              <!-- draft nudge -->
+              <div v-if="nudgeOpen" class="mt-3 space-y-2">
+                <div class="rounded-lg border border-zinc-200 bg-white p-2.5">
+                  <div class="text-[11px] font-bold uppercase tracking-wide text-zinc-500 mb-1">WhatsApp</div>
+                  <p class="text-[12px] text-zinc-800 whitespace-pre-wrap leading-snug">{{ nudgeWhatsApp }}</p>
+                  <UButton
+                    class="mt-2"
+                    size="xs"
+                    color="neutral"
+                    variant="soft"
+                    icon="i-lucide-copy"
+                    @click="copyNudge(nudgeWhatsApp)"
+                  >
+                    Copy
+                  </UButton>
+                </div>
+                <div class="rounded-lg border border-zinc-200 bg-white p-2.5">
+                  <div class="text-[11px] font-bold uppercase tracking-wide text-zinc-500 mb-1">Email</div>
+                  <p class="text-[12px] text-zinc-800 whitespace-pre-wrap leading-snug">{{ nudgeEmail }}</p>
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-copy" @click="copyNudge(nudgeEmail)">
+                      Copy
+                    </UButton>
+                    <UButton size="xs" color="primary" variant="soft" icon="i-lucide-inbox" to="/ops/inbox">
+                      Send via Inbox
+                    </UButton>
+                  </div>
+                </div>
+                <p class="text-[11px] text-zinc-500">Draft copy only — nothing is sent from this page.</p>
+              </div>
+            </UCard>
+
+            <!-- ── broker handoff ───────────────────────── -->
+            <UCard :ui="{ header: 'p-4 sm:px-4', body: 'p-4 sm:p-4' }">
+              <template #header>
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-lucide-handshake" class="size-4 text-primary" />
+                  <h3 class="text-sm font-bold flex-1">Broker handoff</h3>
+                </div>
+              </template>
+
+              <div v-if="broker" class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="size-2 rounded-full shrink-0" :class="PARTNER_STATE_DOT[broker.state]" />
+                  <span class="text-[13px] font-semibold text-zinc-900">{{ broker.name }}</span>
+                </div>
+                <p v-if="broker.waitingFor" class="text-[12px] text-zinc-600 leading-snug">
+                  {{ broker.waitingFor }}
+                </p>
+                <p v-if="broker.contact" class="text-[11px] text-zinc-500">{{ broker.contact }}</p>
+              </div>
+              <p v-else class="text-[12px] text-zinc-500">
+                No broker on this job yet — handing over adds one.
+              </p>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-handshake"
+                  :loading="handingOver"
+                  @click="handToBroker()"
+                >
+                  Hand to broker
+                </UButton>
+                <UButton to="/ops/partners" color="neutral" variant="ghost" size="sm" icon="i-lucide-external-link">
+                  Open on Trade partners
+                </UButton>
+              </div>
+              <p class="mt-2 text-[11px] text-zinc-500 leading-snug">
+                Hands the declaration pack over — the broker still files on TradeNet themselves.
+              </p>
+            </UCard>
+
             <UCard :ui="{ header: 'p-4 sm:px-4', body: 'p-4 sm:p-4' }">
               <template #header>
                 <div class="flex items-center gap-2">
@@ -563,13 +882,19 @@ function when(iso?: string): string {
                 The officer's name and the permit number are recorded against the job once they
                 submit on TradeNet.
               </p>
-              <div v-if="filed" class="mt-3 text-[12px]">
+              <div v-if="filed || queried" class="mt-3 text-[12px]">
                 <div class="text-zinc-500">Permit</div>
                 <div class="font-mono font-semibold text-zinc-800">{{ customs?.permitNo ?? '—' }}</div>
               </div>
             </UCard>
 
-            <DocumentChecklist v-if="s.documents?.length" :shipment="s" mode="cs" @refresh="refresh()" />
+            <DocumentChecklist
+              v-if="s.documents?.length"
+              :shipment="s"
+              mode="cs"
+              show-gaps
+              @refresh="refresh()"
+            />
           </div>
         </div>
       </div>

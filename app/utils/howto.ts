@@ -80,25 +80,27 @@ export const HOWTO: Record<HowToKey, HowTo> = {
     title: 'Customs queue',
     what: 'Every declaration waiting to be filed, with the exact gaps listed before an officer touches TradeNet.',
     click: [
-      'Open the MP-9032-TA declaration — the missing packing list and the other gaps are named.',
-      'Hit Pre-fill from the job, then Submit to TradeNet (demo) as Joreen.',
-      'Show the permit number coming back onto the job — MP-4471-AF already has one, declared by Joreen.'
+      'Click the five tiles to filter — Needs data, Draft declaration, Submitted, Queried, Cleared. MP-6220-AF sits under Queried.',
+      'Open MP-9032-TA: Fill from job prefills the empty fields, Assist reads them off the documents, flags the missing permit (Pan-Asia CFS is blocked on it) and drafts the chase message.',
+      'Submit to TradeNet (demo) as Joreen, then hand the pack to the broker from the same page.'
     ],
     say: [
-      'Human-in-the-loop: M&P collect and check the documents, then a named customs officer files on TradeNet themselves. Nothing is ever auto-submitted.'
+      'Human-in-the-loop: M&P collect and check the documents, then a named customs officer files on TradeNet themselves. Assist only prefills and drafts — nothing is ever auto-submitted.'
     ]
   },
 
   'ops-reviews': {
     title: 'Reviews',
-    what: 'Review requests asked, received and deliberately held — the ask goes out on delivery, not by hand.',
+    what: 'Four lanes — not asked yet, asked, received, held — with the ask, the 48h reminder and the claim gate all automatic.',
     click: [
-      'Open the held list: MP-8125-HF (damage claim) and MP-7719-HF (fee dispute) are suppressed on purpose.',
-      'Show a delivered job where the ask went out on its own after sign-off.'
+      'Held (claim open): MP-8125-HF (damage) and MP-7719-HF (fee dispute) are out of the programme on purpose — the gate line counts them.',
+      'On an asked job (MP-8102-AF) hit Send 48h reminder: the row shows "Reminded ×1 · next due", and the button dies after two.',
+      'On the same lane use Hold with a reason (Damage / Missing item / fee dispute / Unhappy on call) and watch the row move to Held.',
+      'Not asked yet → Send ask now puts the review email in the outbox and moves the row to Asked.'
     ],
     say: [
       'You never ask a customer for a review while their claim is open — the system knows that, so nobody has to remember.',
-      'Feedback gets collected on every clean delivery instead of only when someone finds the time.'
+      'We chase twice and then stop, so the programme never turns into nagging.'
     ]
   },
 
@@ -142,14 +144,17 @@ export const HOWTO: Record<HowToKey, HowTo> = {
 
   'ops-agent': {
     title: 'Agent desk / MCP',
-    what: 'One MCP endpoint that lets Claude or Grok Bot read the live job book — no export, no copy-paste.',
+    what: 'One MCP endpoint that lets Claude or Grok Bot read the live job book and act on it — no export, no copy-paste.',
     click: [
       'Copy the endpoint and show it connected as a custom connector.',
       'Ask out loud: "What\'s outstanding on MP-3318-MC — documents, customs, partners, open messages?"',
-      'Then: "Draft a WhatsApp reply to Brendan on MP-3318-MC telling him what we still need, then send it."'
+      'Then: "Draft a WhatsApp reply to Brendan on MP-3318-MC telling him what we still need, then send it."',
+      'In Try it here run draft_review_ask on MP-8102-AF — the exact review email plus the gate decision, nothing sent.',
+      'Then hold_review_for_claim or issue_reward, and show the result land on /ops/reviews.'
     ],
     say: [
-      'The assistant reads the same live data ops see, so its answers can\'t drift from the job book.'
+      'The assistant reads the same live data ops see, so its answers can\'t drift from the job book.',
+      'It drafts and it holds, but the claim gate and the voucher rules stay in the system, not in the prompt.'
     ]
   },
 
@@ -180,14 +185,15 @@ export const HOWTO: Record<HowToKey, HowTo> = {
 
   'ops-rewards': {
     title: 'Review programme',
-    what: 'The review programme end to end — asks pending, asks held, reviews received, and the voucher codes issued after a 5★.',
+    what: 'The programme end to end — the rules it runs on, the codes issued, the proof still to verify, and every email it sent.',
     click: [
-      'Show pending asks, then the held ones (MP-8125-HF and MP-7719-HF — open claim and fee dispute).',
-      'Open a received 5★ review and show the voucher code that was issued.',
-      'Follow the link to the customer thank-you page.'
+      'Read the Programme rules card out loud: ask on delivery, hold on claim, 48h reminder ×2, 5★ → instant Grab $10.',
+      'Reward codes issued — MP-8101-AF and MP-8112-HF got their voucher the second the 5★ landed, no CS step.',
+      'Awaiting verification — the Google/Facebook screenshot CS still has to check before a code goes out.',
+      'Programme outbox — the actual review asks and voucher emails, then follow the link into the ops Inbox.'
     ],
     say: [
-      'The ask, the hold and the thank-you are one flow — CS never has to remember any of it.'
+      'The ask, the reminder, the hold and the thank-you are one flow — CS never has to remember any of it.'
     ]
   },
 

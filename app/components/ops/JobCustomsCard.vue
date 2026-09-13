@@ -30,10 +30,11 @@ const permitNo = ref('')
 const busy = ref('')
 const err = ref('')
 
-const STATUS_COLOR: Record<string, 'warning' | 'info' | 'success'> = {
+const STATUS_COLOR: Record<string, 'warning' | 'info' | 'success' | 'error'> = {
   docs_pending: 'warning',
   ready_for_declaration: 'info',
   declared: 'success',
+  queried: 'error',
   cleared: 'success'
 }
 
@@ -99,7 +100,10 @@ function when(iso?: string): string {
       class="mb-3"
     />
 
-    <div v-if="customs.status === 'declared' || customs.status === 'cleared'" class="text-sm space-y-1">
+    <div
+      v-if="customs.status === 'declared' || customs.status === 'cleared' || customs.status === 'queried'"
+      class="text-sm space-y-1"
+    >
       <p>
         Filed on TradeNet by <strong>{{ customs.declaredBy ?? '—' }}</strong>
         <template v-if="customs.declaredAt"> · {{ when(customs.declaredAt) }}</template>
@@ -108,6 +112,20 @@ function when(iso?: string): string {
         Permit <UBadge color="success" variant="subtle">{{ customs.permitNo }}</UBadge>
       </p>
       <p v-if="customs.clearedAt" class="text-zinc-600">Cleared {{ when(customs.clearedAt) }}</p>
+      <div v-if="customs.status === 'queried'" class="rounded-lg border border-red-200 bg-red-50 p-2.5 mt-2">
+        <p class="text-[12px] font-semibold text-red-800">Customs query — officer to respond</p>
+        <p class="text-[12px] text-red-700 leading-snug mt-0.5">{{ customs.queryNote }}</p>
+        <UButton
+          class="mt-2"
+          size="xs"
+          color="error"
+          variant="soft"
+          icon="i-lucide-file-pen-line"
+          :to="`/ops/customs/${s.id}`"
+        >
+          Answer on the declaration
+        </UButton>
+      </div>
     </div>
 
     <div v-else class="space-y-3">

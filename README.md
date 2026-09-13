@@ -38,12 +38,12 @@ permit against the job. Nothing is ever auto-submitted.
 | `MP-9032-TA` | Titan Associates | B2B | **Shenzhen LCL, stuck** — ETA passed, no movement 30h, packing list missing, **Pan-Asia CFS blocked** without the permit, Titan waiting on an NOA |
 | `MP-4471-AF` | Allmighty Foods | B2B | Ex-Busan container, **declared on TradeNet by Joreen (manual)**, Docs 4/6, customer asked a question from `/track` |
 | `MP-7302-AF` | Allmighty Foods | B2C | Out for delivery — **live sign-off** in the demo, then the review request sends itself |
-| `MP-7710-AF` | Allmighty Foods | B2C | Delivered today, **review asked**, and Priya's **WhatsApp still needs a reply** |
+| `MP-7710-AF` | Allmighty Foods | B2C | Delivered today, **not asked yet** (Reviews board → Send ask now), and Priya's **WhatsApp still needs a reply** |
 | `MP-8125-HF` | Hey Fran | B2SELF | Delivered & signed off, **open damage claim** → review request **held** |
 | `MP-7719-HF` | Hey Fran | B2SELF | Delivered, **destination-fee dispute** open → review **held**, sits with CS/claims |
 | `MP-8102-AF` | Allmighty Foods | B2C | Delivered, **review request sent**, waiting on the customer |
 | `MP-5108-HF` | Hey Fran | B2SELF | Outlet restock, picked up — clean `/track` page |
-| `MP-6220-AF` | Allmighty Foods | B2B | Busan LCL quote, booked |
+| `MP-6220-AF` | Allmighty Foods | B2B | Busan LCL, filed by Joreen, **Singapore Customs query open** (HS code vs description) — officer responds on the declaration page |
 | `MP-8101-AF`, `MP-8110-AF`, `MP-8112-HF` | mixed | — | Delivered and reviewed — feed the Review programme (5★ auto-voucher, proof awaiting verification) |
 
 Plus seeded quote enquiries, simulated WhatsApp threads, a partner board per job, and
@@ -111,7 +111,7 @@ Deployed demo: https://mnp-flow.vercel.app
 
 Endpoint: `https://<host>/mcp?key=mp-demo-2481` (locally `http://localhost:3000/mcp?key=mp-demo-2481`;
 override the key with `MCP_API_KEY`). JSON-RPC over POST — add it as a custom connector
-in Claude or Grok Bot. Nine tools:
+in Claude or Grok Bot. Twelve tools:
 
 | Tool | What it answers |
 | --- | --- |
@@ -124,6 +124,9 @@ in Claude or Grok Bot. Nine tools:
 | `list_exceptions` | Stuck, ETA passed, blocked, unanswered, sign-off outstanding |
 | `send_email` | Writes a mail onto the job (Resend when configured, else the simulated outbox) |
 | `send_whatsapp` | Appends a simulated WhatsApp message to the job's thread |
+| `draft_review_ask` | Previews the review email + the claim-gate decision for a job — sends nothing |
+| `hold_review_for_claim` | Holds the review ask on a job with a reason (same as the Reviews board) |
+| `issue_reward` | Issues an `MP-THANKS-…` Grab $10 code on a reviewed job and emails it |
 
 ## Notes
 

@@ -104,7 +104,12 @@ export const CLAIM_LABELS: Record<ClaimType, string> = {
  * TradeNet is human-in-the-loop: M&P collect and check the documents, then an
  * M&P customs officer files the declaration manually and records it here.
  */
-export type CustomsStatus = 'docs_pending' | 'ready_for_declaration' | 'declared' | 'cleared'
+export type CustomsStatus =
+  | 'docs_pending'
+  | 'ready_for_declaration'
+  | 'declared'
+  | 'queried'
+  | 'cleared'
 
 export interface ShipmentCustoms {
   required: true
@@ -114,6 +119,10 @@ export interface ShipmentCustoms {
   permitNo?: string // manual entry after a person files on TradeNet
   clearedAt?: string
   note?: string
+  /** Singapore Customs came back with a question — an officer answers it. */
+  queriedAt?: string
+  queryNote?: string
+  respondedAt?: string
   /** TradeNet key-in draft — see DECLARATION_REQUIRED / declarationGaps(). */
   declaration?: CustomsDeclaration
 }
@@ -122,6 +131,7 @@ export const CUSTOMS_LABELS: Record<CustomsStatus, string> = {
   docs_pending: 'Documents pending',
   ready_for_declaration: 'Ready for declaration',
   declared: 'Declared on TradeNet',
+  queried: 'Customs query — officer to respond',
   cleared: 'Customs cleared'
 }
 
@@ -132,6 +142,10 @@ export interface ReviewAsk {
   trigger?: 'delivered' | 'customs_cleared'
   at?: string
   reason?: string
+  /** 48h re-ask (reminder) bookkeeping — set by the ops Reviews board. */
+  reaskAt?: string
+  reaskCount?: number
+  reaskDueAt?: string
 }
 
 export interface QuoteUpdate {
@@ -485,6 +499,121 @@ export function declarationGaps(s: Shipment): string[] {
     }
   }
   return gaps
+}
+
+// ---------------------------------------------------------------------------
+// Prefill — suggestions only. The officer checks every line before filing.
+// ---------------------------------------------------------------------------
+
+/** HS shortlist offered on the key-in form; `match` keys off the cargo description. */
+export const HS_HINTS: Array<{ code: string; label: string; match: RegExp }> = [
+  { code: '8471.60.70', label: 'Keyboards & other input units', match: /keyboard|mouse|input unit/i },
+  { code: '1108.19.00', label: 'Starches — other (konjac, oat fibre)', match: /konjac|oat fibre|starch/i },
+  { code: '1106.20.00', label: 'Flour & meal of roots', match: /flour|meal of root/i },
+  { code: '2007.99.90', label: 'Jellies, jams & fruit purée', match: /jelly|jellies|gumm|candy|snack/i }
+]
+
+export function guessHsCode(description: string): string {
+  return HS_HINTS.find((h) => h.match.test(description))?.code ?? '3926.90.99'
+}
+
+export function guessCountryOfOrigin(place: string): string {
+  const o = place.toLowerCase()
+  if (/hong kong|kowloon|hkg/.test(o)) return 'HK — Hong Kong SAR'
+  if (/shenzhen|yantian|shanghai|ningbo|china|cnsz/.test(o)) return 'CN — China'
+  if (/busan|gyeonggi|korea|krpus/.test(o)) return 'KR — Republic of Korea'
+  if (/taiwan|kaohsiung/.test(o)) return 'TW — Taiwan'
+  if (/singapore|senoko|tuas|psa|keppel|tai seng/.test(o)) return 'SG — Singapore'
+  return 'CN — China'
+}
+
+/** Free-text origin / destination → a UN/LOCODE-ish port string for the key-in. */
+export function guessPort(place: string): string {
+  const p = place.toLowerCase()
+  if (/keppel/.test(p)) return 'SGSIN — Keppel Distripark'
+  if (/psa|pasir panjang/.test(p)) return 'SGSIN — PSA Pasir Panjang'
+  if (/singapore|senoko|tuas|tai seng|jurong|changi/.test(p)) return 'SGSIN — Singapore'
+  if (/hong kong|kowloon|hkg/.test(p)) return 'HKHKG — Hong Kong'
+  if (/yantian|shenzhen/.test(p)) return 'CNSZX — Shenzhen (Yantian)'
+  if (/busan|gyeonggi/.test(p)) return 'KRPUS — Busan'
+  if (/shanghai/.test(p)) return 'CNSHA — Shanghai'
+  if (/kaohsiung/.test(p)) return 'TWKHH — Kaohsiung'
+  const head = (place.split('→').pop() ?? place).split(',')[0] ?? place
+  return head.trim()
+}
+
+/** Rough CIF value for the draft — the officer replaces it from the invoice. */
+function guessCargoValue(s: Shipment): number {
+  const lump = s.quote?.lumpSum?.amount
+  if (lump) return Math.round(lump)
+  return Math.max(1200, Math.round(((s.weightKg || 100) * 48) / 10) * 10)
+}
+
+/**
+ * Where each prefilled value would have come from on the physical file — shown
+ * next to the suggestion so the officer knows what to check it against.
+ */
+export const PREFILL_SOURCES: Partial<Record<keyof CustomsDeclaration, string>> = {
+  declarationType: 'M&P standing instruction',
+  permitType: 'M&P standing instruction',
+  importerName: 'Booking — customer account',
+  importerUEN: 'Booking — customer account',
+  hsCode: 'Commercial invoice (cargo description)',
+  countryOfOrigin: 'Commercial invoice',
+  cargoValue: 'Commercial invoice / quotation',
+  currency: 'Commercial invoice / quotation',
+  vesselName: 'House bill of lading',
+  voyage: 'House bill of lading',
+  blNo: 'House bill of lading',
+  containerNo: 'House bill of lading',
+  portOfLoading: 'House bill of lading',
+  portOfDischarge: 'House bill of lading',
+  packages: 'Packing list',
+  grossWeightKg: 'Packing list',
+  description: 'Packing list / commercial invoice',
+  incoterms: 'Booking — incoterms'
+}
+
+/**
+ * Build a declaration draft from what the job already knows — booking, B/L
+ * details in the cargo description, quotation and the saved draft.
+ *
+ * Pure and shared so the server can reuse it. It only *suggests*: the caller
+ * decides which fields to write, and a person still files on TradeNet.
+ */
+export function prefillDeclaration(s: Shipment): Partial<CustomsDeclaration> {
+  const d = s.customs?.declaration ?? {}
+  const vessel = /\(([A-Z][A-Z \-]+?)\s+V\.?\s*([A-Z0-9]+)\)/.exec(s.description ?? '')
+  const container = /\b[A-Z]{4}\s?\d{6}[- ]?\d\b/.exec(s.description ?? '')
+  const events = s.events ?? []
+  const fromEvents = events.map((e) => e.note ?? '').join(' ')
+  const vesselFromEvents = /\b([A-Z][A-Z ]{3,})\s+V\.?\s*([A-Z0-9]{3,})\b/.exec(fromEvents)
+
+  const out: Partial<CustomsDeclaration> = {
+    declarationType: d.declarationType ?? 'IN',
+    permitType: d.permitType ?? 'IN-PAYMENT (GST)',
+    importerName: d.importerName ?? s.company ?? s.customerName,
+    importerUEN: d.importerUEN ?? '201512345K',
+    hsCode: d.hsCode ?? guessHsCode(s.description ?? ''),
+    countryOfOrigin: d.countryOfOrigin ?? guessCountryOfOrigin(s.origin ?? ''),
+    cargoValue: d.cargoValue ?? guessCargoValue(s),
+    currency: d.currency ?? s.quote?.lumpSum?.currency ?? 'USD',
+    vesselName: d.vesselName ?? vessel?.[1]?.trim() ?? vesselFromEvents?.[1]?.trim(),
+    voyage: d.voyage ?? vessel?.[2] ?? vesselFromEvents?.[2],
+    blNo: d.blNo ?? s.poNumber,
+    containerNo: d.containerNo ?? container?.[0],
+    portOfLoading: d.portOfLoading ?? guessPort(s.origin ?? ''),
+    portOfDischarge: d.portOfDischarge ?? guessPort(s.destination ?? ''),
+    packages: d.packages ?? s.pieces,
+    grossWeightKg: d.grossWeightKg ?? Math.round(s.weightKg ?? 0),
+    description: d.description ?? (s.description ?? '').replace(/\s*\([^)]*\)\s*$/, '').trim(),
+    incoterms: d.incoterms ?? s.incoterms
+  }
+
+  for (const key of Object.keys(out) as Array<keyof CustomsDeclaration>) {
+    if (!declarationFieldFilled(out[key])) delete out[key]
+  }
+  return out
 }
 
 /** Unified inbox thread — computed by GET /api/comms, never stored. */

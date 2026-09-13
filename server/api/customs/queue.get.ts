@@ -10,6 +10,10 @@ export default defineEventHandler(async () => {
     .filter((s) => s.customs)
     .map((s) => {
       const docs = docsDone(s)
+      const partner = (role: 'broker' | 'warehouse') =>
+        (s.partners ?? []).find((p) => p.role === role)
+      const broker = partner('broker')
+      const warehouse = partner('warehouse')
       return {
         id: s.id,
         client: s.company ?? s.customerName,
@@ -22,6 +26,12 @@ export default defineEventHandler(async () => {
         eta: s.eta,
         permitNo: s.customs!.permitNo,
         declaredBy: s.customs!.declaredBy,
+        queryNote: s.customs!.queryNote,
+        queriedAt: s.customs!.queriedAt,
+        broker: broker ? { name: broker.name, state: broker.state, waitingFor: broker.waitingFor } : null,
+        warehouse: warehouse
+          ? { name: warehouse.name, state: warehouse.state, waitingFor: warehouse.waitingFor }
+          : null,
         declaration: s.customs!.declaration ?? {}
       }
     })

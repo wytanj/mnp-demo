@@ -33,6 +33,7 @@ function customsLabel(status: CustomsStatus): string {
   if (status === 'docs_pending') return 'Documents pending'
   if (status === 'ready_for_declaration') return 'Ready for customs'
   if (status === 'declared') return 'Declared on TradeNet'
+  if (status === 'queried') return 'With Singapore Customs'
   return 'Customs cleared'
 }
 

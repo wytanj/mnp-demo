@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Shipment } from '#shared/utils/shipping'
+import { programmeOf } from '#shared/utils/shipping'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -17,6 +18,13 @@ const busy = ref(false)
 const submitError = ref('')
 
 const jobId = computed(() => shipment.value?.id ?? id.toUpperCase())
+
+/** What this job's review programme pays — not every programme pays Grab $10. */
+const rewardValue = computed(() => {
+  const s = shipment.value
+  if (!s || typeof programmeOf !== 'function') return 'Grab $10'
+  return programmeOf(s)?.reward?.value ?? 'Grab $10'
+})
 
 async function onScreenshot(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -79,7 +87,7 @@ async function submit() {
         <div v-if="shipment.review.reward" class="rev-voucher">
           <div class="rev-voucher-emoji">🎁</div>
           <p class="rev-voucher-t">Thank you — here's a little something</p>
-          <p class="rev-voucher-v">{{ shipment.review.reward.value ?? 'Grab $10' }} voucher</p>
+          <p class="rev-voucher-v">{{ shipment.review.reward.value ?? rewardValue }} voucher</p>
           <p class="rev-voucher-code">{{ shipment.review.reward.code }}</p>
           <p class="rev-voucher-note">We've emailed this to you too.</p>
         </div>
@@ -116,7 +124,7 @@ async function submit() {
         <div class="rev-proof">
           <p class="rev-proof-t">🎁 Left us a review on Google or Facebook?</p>
           <p class="rev-proof-s">
-            Upload a screenshot — once M&amp;P verifies it we email a Grab $10 voucher.
+            Upload a screenshot — once M&amp;P verifies it we email a {{ rewardValue }} voucher.
           </p>
           <div class="rev-plats">
             <label><input v-model="platforms" type="checkbox" value="google" /> Google</label>

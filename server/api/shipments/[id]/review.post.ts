@@ -1,3 +1,5 @@
+import { programmeOf } from '#shared/utils/shipping'
+
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const shipment = id ? await dbGetShipment(id) : undefined
@@ -36,7 +38,8 @@ export default defineEventHandler(async (event) => {
   shipment.reviewAsk = {
     ...(shipment.reviewAsk ?? {}),
     state: 'answered',
-    at: shipment.review.at
+    at: shipment.review.at,
+    scheduledFor: undefined
   }
   addEvent(shipment, {
     type: 'note',
@@ -44,16 +47,27 @@ export default defineEventHandler(async (event) => {
     note: `Customer left a ${rating}-star review${shipment.review.comment ? `: "${shipment.review.comment}"` : ''}${helpedBy ? ` · shout-out for ${helpedBy}` : ''}`
   })
 
-  // 5★ earns the thank-you voucher straight away — no CS step. Google/Facebook
-  // proof still goes through manual verification (`reward.post.ts`).
+  // Only the 5★ auto programme pays out by itself. Public-proof programmes wait
+  // for CS to verify the screenshot, and B2B credits are issued by hand — both
+  // go through `reward.post.ts`.
+  const programme = programmeOf(shipment)
   let rewardCode: string | undefined
-  if (rating === 5 && !shipment.review.reward) {
+  if (rating === 5 && programme.reward.auto === 'five_star' && !shipment.review.reward) {
     rewardCode = thanksCode(shipment.id)
-    shipment.review.reward = { code: rewardCode, at: new Date().toISOString(), value: 'Grab $10' }
+    shipment.review.reward = { code: rewardCode, at: new Date().toISOString(), value: programme.reward.value }
     addEvent(shipment, {
       type: 'note',
       actor: 'system',
-      note: `⭐ 5-star review — thank-you voucher ${rewardCode} issued automatically`
+      note: `⭐ 5-star review — ${programme.reward.value} voucher ${rewardCode} issued automatically`
+    })
+  } else if (programme.reward.auto !== 'five_star' && !shipment.review.reward) {
+    addEvent(shipment, {
+      type: 'note',
+      actor: 'system',
+      note: programme.reward.auto === 'verified_proof'
+        ? `🔍 ${programme.name} — review awaiting CS verification before the ${programme.reward.value} voucher goes out`
+        : `📝 ${programme.name} — ${programme.reward.value} is credited manually by the account manager`,
+      internal: true
     })
   }
 

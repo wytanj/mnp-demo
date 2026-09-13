@@ -47,7 +47,8 @@ const TOOL_DOCS: Array<{ name: string; what: string }> = [
   { name: 'send_whatsapp', what: 'Append a simulated WhatsApp message to the job thread and timeline.' },
   { name: 'draft_review_ask', what: 'Preview the review email for a job and the gate decision — drafts only, sends nothing.' },
   { name: 'hold_review_for_claim', what: 'Hold a review ask with a reason so an unhappy customer is never asked mid-complaint.' },
-  { name: 'issue_reward', what: 'Issue the Grab $10 thank-you voucher on a review and email the code to the customer.' }
+  { name: 'issue_reward', what: 'Issue the thank-you voucher its programme pays on a review and email the code to the customer.' },
+  { name: 'review_programme_stats', what: 'Compare the three review programmes: asks, reviews, ask→review %, avg rating, vouchers, cost per review.' }
 ]
 
 const PROMPTS = [

@@ -1,5 +1,5 @@
-import type { ClaimType, Shipment } from '#shared/utils/shipping'
-import { CLAIM_LABELS, reviewAskDecision } from '#shared/utils/shipping'
+import type { ClaimType, ProgrammeId, Shipment } from '#shared/utils/shipping'
+import { CLAIM_LABELS, programmeOf, reviewAskDecision } from '#shared/utils/shipping'
 
 export interface ReviewRow {
   id: string
@@ -24,6 +24,14 @@ export interface ReviewRow {
   reaskAt?: string
   reaskCount?: number
   reaskDueAt?: string
+  /** Which review programme the job runs on — see REVIEW_PROGRAMMES. */
+  programmeId: ProgrammeId
+  /** programme.short, ready to badge. */
+  programme: string
+  /** What this programme pays out, e.g. "Grab $10". */
+  rewardValue: string
+  /** Delayed programmes: the ask is queued for this date, not sent yet. */
+  scheduledFor?: string
   /** The claim gate, resolved server-side so the board needs one feed only. */
   claimType?: ClaimType
   claimLabel?: string
@@ -36,6 +44,7 @@ function row(s: Shipment): ReviewRow {
   const decision = reviewAskDecision(s)
   // B2C jobs carry the shipper as company — fall back to the person we delivered to.
   const client = (s.company ?? '').trim() || s.customerName
+  const programme = programmeOf(s)
   return {
     id: s.id,
     client,
@@ -57,6 +66,10 @@ function row(s: Shipment): ReviewRow {
     reaskAt: s.reviewAsk?.reaskAt,
     reaskCount: s.reviewAsk?.reaskCount,
     reaskDueAt: s.reviewAsk?.reaskDueAt,
+    programmeId: programme.id,
+    programme: programme.short,
+    rewardValue: programme.reward.value,
+    scheduledFor: s.reviewAsk?.scheduledFor,
     claimType: s.claim?.type,
     claimLabel: s.claim ? CLAIM_LABELS[s.claim.type] : undefined,
     claimOpen: s.claim?.status === 'open',
@@ -111,6 +124,8 @@ export default defineEventHandler(async () => {
     asked,
     received,
     suppressed,
+    /** One row per review programme — the board's programme cards. */
+    programmes: programmeStats(shipments),
     counts: {
       notAsked: notAsked.length,
       asked: asked.length,

@@ -1,5 +1,5 @@
 import type { OutboxEmail, Quote, Shipment, ShipmentEvent, ShipmentStatus, ThreadMessage } from '#shared/utils/shipping'
-import { MAIL_FROM_DISPLAY, STATUS_LABELS } from '#shared/utils/shipping'
+import { MAIL_FROM_DISPLAY, STATUS_LABELS, programmeOf } from '#shared/utils/shipping'
 
 export function newId(prefix = 'MP'): string {
   const digits = Math.floor(1000 + Math.random() * 9000)
@@ -51,6 +51,13 @@ export function buildTrackingEmail(shipment: Shipment, at?: string): OutboxEmail
 }
 
 export function buildReviewEmail(shipment: Shipment, at?: string): OutboxEmail {
+  // What the customer gets back depends on the programme the job runs on.
+  const programme = programmeOf(shipment)
+  const reward = programme.reward
+  const rewardLine =
+    reward.auto === 'manual'
+      ? `Left us a public Google or Facebook review? Tell us on the form and as a thank-you we'll credit ${reward.value.replace(/ off next booking$/, ' off your next booking')}.`
+      : `Left us a public Google or Facebook review? Upload a screenshot on the form to claim a ${reward.value} voucher.`
   return {
     id: crypto.randomUUID(),
     shipmentId: shipment.id,
@@ -64,7 +71,7 @@ export function buildReviewEmail(shipment: Shipment, at?: string): OutboxEmail {
       ``,
       `Shipment ${shipment.id} was delivered${shipment.signoff ? ` and signed for by ${shipment.signoff.name}` : ''}.`,
       `How did we do? It takes 20 seconds.`,
-      `Left us a public Google or Facebook review? Upload a screenshot on the form to claim a Grab $10 voucher.`,
+      rewardLine,
       ``,
       `— M&P International Freights · Moving you forward`
     ].join('\n'),
@@ -416,6 +423,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // container ex-Busan discharged at PSA, customs cleared, drayage to Senoko
   const s1: Shipment = {
     id: 'MP-4471-AF',
+    programmeId: 'b2b-delayed',
     mode: 'b2b',
     service: 'Sea freight import + customs + drayage',
     status: 'in_transit',
@@ -552,6 +560,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Scenario 2 — B2C last mile: Allmighty Foods online order to a consumer
   const s2: Shipment = {
     id: 'MP-7302-AF',
+    programmeId: 'auto5',
     mode: 'b2c',
     service: 'Last-mile delivery',
     status: 'out_for_delivery',
@@ -579,6 +588,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Scenario 3 — B2SELF last mile: Hey Fran restocking their own pop-up
   const s3: Shipment = {
     id: 'MP-5108-HF',
+    programmeId: 'auto5',
     mode: 'b2self',
     service: 'Last-mile delivery (own outlets)',
     status: 'picked_up',
@@ -605,6 +615,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Scenario 4 — B2B LCL import at quotation stage: Allmighty Foods jelly cartons
   const s4: Shipment = {
     id: 'MP-6220-AF',
+    programmeId: 'b2b-delayed',
     mode: 'b2b',
     service: 'LCL sea import + customs + delivery',
     status: 'booked',
@@ -759,6 +770,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Scenario 5 — B2B LCL import ex-Hong Kong for Mecha (mecha.store)
   const s5: Shipment = {
     id: 'MP-3318-MC',
+    programmeId: 'b2b-delayed',
     mode: 'b2b',
     service: 'LCL sea import (HK → SG)',
     status: 'in_transit',
@@ -888,6 +900,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Review-program seeds — delivered jobs that feed the rewards dashboard
   const s6: Shipment = {
     id: 'MP-8101-AF',
+    programmeId: 'proof',
     mode: 'b2b',
     service: 'Last-mile delivery',
     status: 'delivered',
@@ -931,6 +944,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
 
   const s7: Shipment = {
     id: 'MP-8110-AF',
+    programmeId: 'proof',
     mode: 'b2b',
     service: 'Last-mile delivery',
     status: 'delivered',
@@ -971,6 +985,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
 
   const s8: Shipment = {
     id: 'MP-8102-AF',
+    programmeId: 'auto5',
     mode: 'b2c',
     service: 'Last-mile delivery',
     status: 'delivered',
@@ -1002,6 +1017,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
 
   const s9: Shipment = {
     id: 'MP-8112-HF',
+    programmeId: 'auto5',
     mode: 'b2self',
     service: 'Last-mile delivery (own outlets)',
     status: 'delivered',
@@ -1045,6 +1061,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Delivered but NOT clean — open damage claim suppresses the review ask
   const s10: Shipment = {
     id: 'MP-8125-HF',
+    programmeId: 'auto5',
     mode: 'b2self',
     service: 'Last-mile delivery (own outlets)',
     status: 'delivered',
@@ -1095,6 +1112,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // CFS blocked without the permit, and the customer is waiting on an NOA.
   const s11: Shipment = {
     id: 'MP-9032-TA',
+    programmeId: 'b2b-delayed',
     mode: 'b2b',
     service: 'LCL sea import + customs + delivery',
     status: 'in_transit',
@@ -1176,6 +1194,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // customer has replied on WhatsApp asking about the reward.
   const s12: Shipment = {
     id: 'MP-7710-AF',
+    programmeId: 'auto5',
     mode: 'b2c',
     service: 'Last-mile delivery',
     status: 'delivered',
@@ -1224,6 +1243,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   // Hey Fran says was never quoted. Open claim → review ask held.
   const s13: Shipment = {
     id: 'MP-7719-HF',
+    programmeId: 'auto5',
     mode: 'b2self',
     service: 'Last-mile delivery (own outlets)',
     status: 'delivered',
@@ -1281,6 +1301,217 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s13, { type: 'claim', actor: 'customer', note: '⚠️ Destination fee dispute opened by customer: Jewel B2 loading bay billed SGD 45 after-hours access', at: minsAgo(60 * 24) })
   addEvent(s13, { type: 'note', actor: 'system', note: '⏸ Review request held — open destination fee dispute → CS/claims', internal: true, at: minsAgo(60 * 24) })
   addEvent(s13, { type: 'note', actor: 'cs', note: 'Billing pulling the Jewel charge slip against QT-HF standing rates', at: minsAgo(60 * 21) })
+
+  // Scenario 14 — B2C online order on the 5★ auto programme: review came back
+  // 3★, so nothing auto-issued. CS sees an unhappy-ish review, not a voucher.
+  const s14: Shipment = {
+    id: 'MP-8130-AF',
+    programmeId: 'auto5',
+    mode: 'b2c',
+    service: 'Last-mile delivery',
+    status: 'delivered',
+    customerName: 'Marcus Ong',
+    customerEmail: 'marcus.ong@example.sg',
+    company: 'Allmighty Foods Pte Ltd',
+    origin: 'Allmighty Foods warehouse, Senoko Food Hub',
+    destination: 'Blk 219 Serangoon Ave 4, #05-88',
+    eta: minsAgo(60 * 30),
+    driverName: 'Suresh Kumar',
+    driverPhone: '92345678',
+    vehicle: 'Van — GX 8814 D',
+    pieces: 1,
+    weightKg: 5,
+    description: 'Online order #AMF-10744 — konjac snack multipack',
+    events: [],
+    createdAt: minsAgo(60 * 36),
+    signoff: { name: 'Marcus Ong', signature: SEED_SIGNATURE, at: minsAgo(60 * 30) },
+    review: {
+      rating: 3,
+      comment: 'Box was dented, contents fine',
+      at: minsAgo(60 * 26)
+    },
+    reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 29) }
+  }
+  addEvent(s14, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 36) })
+  addEvent(s14, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 36) })
+  addEvent(s14, { type: 'status', status: 'picked_up', actor: 'driver', at: minsAgo(60 * 34) })
+  addEvent(s14, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Serangoon area, 4 stops away', at: minsAgo(60 * 31) })
+  addEvent(s14, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Marcus Ong', at: minsAgo(60 * 30) })
+  addEvent(s14, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 30) })
+  addEvent(s14, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 29) })
+  addEvent(s14, { type: 'note', actor: 'customer', note: 'Customer left a 3-star review: "Box was dented, contents fine"', at: minsAgo(60 * 26) })
+  addEvent(s14, { type: 'note', actor: 'cs', note: '3★ — no voucher on the 5★ auto programme. Sarah (CS) to call about the dented carton.', internal: true, at: minsAgo(60 * 25) })
+
+  // Scenario 15 — public-proof programme, one reminder already out, still silent.
+  const s15: Shipment = {
+    id: 'MP-8140-AF',
+    programmeId: 'proof',
+    mode: 'b2b',
+    service: 'Last-mile delivery',
+    status: 'delivered',
+    customerName: 'Esther Ng',
+    customerEmail: 'esther@allmightyfoods.com.sg',
+    company: 'Allmighty Foods Pte Ltd',
+    poNumber: 'PO-4502',
+    incoterms: 'DAP',
+    origin: 'Allmighty Foods, Senoko Food Hub',
+    destination: 'FairPrice Distribution Centre, Joo Koon Circle',
+    eta: minsAgo(60 * 73),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: '14-ft lorry — GBC 4521 K',
+    pieces: 72,
+    weightKg: 610,
+    description: 'Jelly & noodle cartons — 6 pallets, ambient',
+    events: [],
+    createdAt: minsAgo(60 * 84),
+    signoff: { name: 'Rosli (FairPrice inbound)', signature: SEED_SIGNATURE, at: minsAgo(60 * 72) },
+    reviewAsk: {
+      state: 'sent',
+      trigger: 'delivered',
+      at: minsAgo(60 * 71),
+      reaskAt: minsAgo(60 * 23),
+      reaskCount: 1,
+      reaskDueAt: new Date(Date.now() + 25 * 3600_000).toISOString()
+    }
+  }
+  addEvent(s15, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 84) })
+  addEvent(s15, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 84) })
+  addEvent(s15, { type: 'status', status: 'picked_up', actor: 'driver', note: '6 pallets loaded, Senoko bay 1', at: minsAgo(60 * 78) })
+  addEvent(s15, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Booked into the Joo Koon 9am window', at: minsAgo(60 * 74) })
+  addEvent(s15, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Rosli (FairPrice inbound)', at: minsAgo(60 * 72) })
+  addEvent(s15, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 72) })
+  addEvent(s15, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 71) })
+  addEvent(s15, { type: 'note', actor: 'system', note: '🔁 Review reminder sent (re-ask #1) — next in 48h', at: minsAgo(60 * 23) })
+
+  // Scenario 16 — public-proof done properly: Facebook screenshot uploaded, CS
+  // verified it by hand, then the voucher went out.
+  const s16: Shipment = {
+    id: 'MP-8118-HF',
+    programmeId: 'proof',
+    mode: 'b2self',
+    service: 'Last-mile delivery (own outlets)',
+    status: 'delivered',
+    customerName: 'Fran Lim',
+    customerEmail: 'fran@heyfran.com',
+    company: 'Hey Fran',
+    poNumber: 'TRF-0228',
+    origin: 'Hey Fran HQ & warehouse, Kaki Bukit Ave 1',
+    destination: 'Hey Fran pop-up, Orchard Central #02-18',
+    eta: minsAgo(60 * 51),
+    driverName: 'Azlan Ismail',
+    driverPhone: '93456789',
+    vehicle: 'Van — GY 3307 A',
+    pieces: 11,
+    weightKg: 128,
+    description: 'Launch week restock — retail stock, tote bags & display cards',
+    events: [],
+    createdAt: minsAgo(60 * 60),
+    signoff: { name: 'Fran Lim', signature: SEED_SIGNATURE, at: minsAgo(60 * 50) },
+    review: {
+      rating: 5,
+      comment: 'Posted this on our Facebook page — Azlan unloaded and stacked before we even opened.',
+      at: minsAgo(60 * 45),
+      screenshot: reviewShot('Hey Fran', 5, 'Posted this on our Facebook page — Azlan unloaded and stacked before we even opened.', 'Facebook'),
+      platforms: ['facebook'],
+      reward: { code: 'MP-THANKS-8118MV', at: minsAgo(60 * 42), value: 'Grab $10' },
+      helpedBy: 'Azlan (driver)'
+    },
+    reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 49) }
+  }
+  addEvent(s16, { type: 'created', actor: 'cs', note: 'Internal transfer booked, tracking link shared', at: minsAgo(60 * 60) })
+  addEvent(s16, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 60) })
+  addEvent(s16, { type: 'status', status: 'picked_up', actor: 'driver', note: '11 boxes loaded at Kaki Bukit', at: minsAgo(60 * 55) })
+  addEvent(s16, { type: 'status', status: 'out_for_delivery', actor: 'driver', at: minsAgo(60 * 51) })
+  addEvent(s16, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Fran Lim', at: minsAgo(60 * 50) })
+  addEvent(s16, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 50) })
+  addEvent(s16, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 49) })
+  addEvent(s16, { type: 'note', actor: 'customer', note: 'Customer left a 5-star review with a Facebook screenshot · shout-out for Azlan (driver)', at: minsAgo(60 * 45) })
+  addEvent(s16, { type: 'note', actor: 'cs', note: '🔍 Facebook screenshot checked against the Hey Fran page — genuine public review (Sarah, CS)', internal: true, at: minsAgo(60 * 43) })
+  addEvent(s16, { type: 'note', actor: 'cs', note: '🎁 Review approved — Grab $10 voucher MP-THANKS-8118MV emailed to customer', at: minsAgo(60 * 42) })
+
+  // Scenario 17 — B2B delayed programme run through: delivered, the ask waited
+  // three days, then a 4★ came back. The SGD 20 credit is the AM's call.
+  const s17: Shipment = {
+    id: 'MP-9040-TA',
+    programmeId: 'b2b-delayed',
+    mode: 'b2b',
+    service: 'LCL sea import + customs + delivery',
+    status: 'delivered',
+    customerName: 'WY Tan',
+    customerEmail: 'wy.tan@titanassociates.com.sg',
+    company: 'Titan Associates Pte Ltd',
+    poNumber: 'ICS2007912',
+    incoterms: 'FOB',
+    origin: 'Cafganic Import & Export Trading Co. Ltd, Shenzhen (Yantian) CFS',
+    destination: 'Titan Associates, 8 Tai Seng Link',
+    eta: minsAgo(60 * 24 * 6 + 60 * 2),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: '14-ft lorry — GBC 4521 K',
+    pieces: 34,
+    weightKg: 430,
+    description: '34 pkgs wireless keyboards — Cafganic PO ICS2007912 (LCL, unstuffed at Keppel)',
+    events: [],
+    createdAt: minsAgo(60 * 24 * 14),
+    signoff: { name: 'Jason Sim (Titan stores)', signature: SEED_SIGNATURE, at: minsAgo(60 * 24 * 6) },
+    review: {
+      rating: 4,
+      comment: 'Permit and delivery both on schedule. Would like the invoice a day earlier next time.',
+      at: minsAgo(60 * 24 * 2)
+    },
+    reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 24 * 3) }
+  }
+  addEvent(s17, { type: 'created', actor: 'cs', note: 'Booking from ICS Shenzhen — Cafganic PO ICS2007912', at: minsAgo(60 * 24 * 14) })
+  addEvent(s17, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 24 * 14) })
+  addEvent(s17, { type: 'status', status: 'picked_up', actor: 'cs', note: 'Cargo received into Shenzhen CFS', at: minsAgo(60 * 24 * 12) })
+  addEvent(s17, { type: 'customs', actor: 'cs', note: '🛃 Import permit approved on TradeNet — filed by Joreen (M&P Customs)', at: minsAgo(60 * 24 * 7) })
+  addEvent(s17, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Unstuffed at Keppel, on the way to Tai Seng', at: minsAgo(60 * 24 * 6 + 180) })
+  addEvent(s17, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Jason Sim (Titan stores)', at: minsAgo(60 * 24 * 6) })
+  addEvent(s17, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 24 * 6) })
+  addEvent(s17, { type: 'note', actor: 'system', note: '🗓 Review ask scheduled — B2B delayed programme asks 3 days after delivery', at: minsAgo(60 * 24 * 6) })
+  addEvent(s17, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 24 * 3) })
+  addEvent(s17, { type: 'note', actor: 'customer', note: 'Customer left a 4-star review: "Permit and delivery both on schedule. Would like the invoice a day earlier next time."', at: minsAgo(60 * 24 * 2) })
+
+  // Scenario 18 — the delayed ask in flight: delivered yesterday, nothing emailed
+  // yet, the queue shows it due in two days.
+  const s18: Shipment = {
+    id: 'MP-9044-TA',
+    programmeId: 'b2b-delayed',
+    mode: 'b2b',
+    service: 'Last-mile delivery (ex CFS)',
+    status: 'delivered',
+    customerName: 'WY Tan',
+    customerEmail: 'wy.tan@titanassociates.com.sg',
+    company: 'Titan Associates Pte Ltd',
+    poNumber: 'ICS2008471',
+    incoterms: 'FOB',
+    origin: 'Pan-Asia CFS, Keppel Distripark',
+    destination: 'Titan Associates, 8 Tai Seng Link',
+    eta: minsAgo(60 * 25),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: '14-ft lorry — GBC 4521 K',
+    pieces: 18,
+    weightKg: 220,
+    description: '18 pkgs wireless mice — unstuffed ex ICS2008471',
+    events: [],
+    createdAt: minsAgo(60 * 40),
+    signoff: { name: 'Jason Sim (Titan stores)', signature: SEED_SIGNATURE, at: minsAgo(60 * 24) },
+    reviewAsk: {
+      state: 'not_yet',
+      trigger: 'delivered',
+      at: minsAgo(60 * 24),
+      scheduledFor: new Date(Date.now() + 2 * 24 * 3600_000).toISOString()
+    }
+  }
+  addEvent(s18, { type: 'created', actor: 'cs', note: 'Delivery booked off the CFS unstuffing — tracking link sent', at: minsAgo(60 * 40) })
+  addEvent(s18, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 40) })
+  addEvent(s18, { type: 'status', status: 'picked_up', actor: 'driver', note: '18 pkgs collected at Keppel Distripark', at: minsAgo(60 * 28) })
+  addEvent(s18, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Arriving Tai Seng Link', at: minsAgo(60 * 25) })
+  addEvent(s18, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Jason Sim (Titan stores)', at: minsAgo(60 * 24) })
+  addEvent(s18, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 24) })
+  addEvent(s18, { type: 'note', actor: 'system', note: '🗓 Review ask scheduled — B2B delayed programme asks 3 days after delivery', at: minsAgo(60 * 24) })
 
   // WhatsApp + partner coordination on the existing hero jobs
   s1.whatsapp = [
@@ -1394,9 +1625,9 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s5, { type: 'note', actor: 'cs', note: '📩 brendan.ds@gmail.com wrote in quoting this job (new address brendan.ds@gmail.com)', internal: true, at: minsAgo(60 * 18) })
   addEvent(s5, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "MP-3318-MC — any update on unstuffing?"', internal: true, at: minsAgo(60 * 17) })
 
-  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13]
+  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18]
   const emails: OutboxEmail[] = [
-    ...[s1, s2, s3, s5, s6, s7, s8, s9, s10, s11, s12, s13].map((s) => buildTrackingEmail(s, s.createdAt)),
+    ...[s1, s2, s3, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18].map((s) => buildTrackingEmail(s, s.createdAt)),
     buildReviewEmail(s6, minsAgo(60 * 18)),
     buildRewardEmail(s6, 'MP-THANKS-8101KQ', minsAgo(60 * 12)),
     buildReviewEmail(s7, minsAgo(60 * 26)),
@@ -1404,6 +1635,12 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     buildReviewEmail(s9, minsAgo(60 * 46)),
     buildRewardEmail(s9, 'MP-THANKS-8112RD', minsAgo(60 * 40)),
     buildReviewEmail(s12, minsAgo(60 * 2)),
+    buildReviewEmail(s14, minsAgo(60 * 29)),
+    buildReviewEmail(s15, minsAgo(60 * 71)),
+    { ...buildReviewEmail(s15, minsAgo(60 * 23)), id: 'out-8140-reask', subject: `Reminder: how did we do on ${s15.id}?` },
+    buildReviewEmail(s16, minsAgo(60 * 49)),
+    buildRewardEmail(s16, 'MP-THANKS-8118MV', minsAgo(60 * 42)),
+    buildReviewEmail(s17, minsAgo(60 * 24 * 3)),
     // Titan: CS chased the packing list, WY replied asking for the arrival notice — needs a reply
     buildCsReplyEmail({
       id: 'out-9032-titan',

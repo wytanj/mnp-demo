@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ProgrammeId, ProgrammeStats } from '#shared/utils/shipping'
+import { REVIEW_PROGRAMMES } from '#shared/utils/shipping'
 import type { ReviewRow } from '~/components/ops/ReviewColumn.vue'
 
 /**
@@ -16,6 +18,7 @@ interface ReviewBoard {
   asked: ReviewRow[]
   received: ReviewRow[]
   suppressed: ReviewRow[]
+  programmes: ProgrammeStats[]
   counts: {
     notAsked: number
     asked: number
@@ -34,6 +37,7 @@ const EMPTY: ReviewBoard = {
   asked: [],
   received: [],
   suppressed: [],
+  programmes: [],
   counts: {
     notAsked: 0, asked: 0, received: 0, held: 0, heldByClaim: 0,
     reminded: 0, issued: 0, awaitingVerification: 0, avgRating: null
@@ -48,6 +52,32 @@ const tab = ref('asked')
 
 const counts = computed(() => board.value?.counts ?? EMPTY.counts)
 
+/**
+ * Programme filter — the same three programmes as /ops/rewards, applied to the
+ * four lanes client-side. Labels come from the API when it has stats, from the
+ * shared definitions otherwise.
+ */
+const programmes = computed(() => {
+  const live = board.value?.programmes ?? []
+  if (live.length) return live.map((p) => ({ id: p.id as ProgrammeId, short: p.short, icon: p.icon }))
+  return ((REVIEW_PROGRAMMES ?? []) as Array<{ id: ProgrammeId; short: string; icon: string }>)
+    .map((p) => ({ id: p.id, short: p.short, icon: p.icon }))
+})
+
+const programmeId = ref<'all' | ProgrammeId>('all')
+
+function inProgramme(rows: ReviewRow[]): ReviewRow[] {
+  if (programmeId.value === 'all') return rows
+  return rows.filter((r) => r.programmeId === programmeId.value)
+}
+
+const lanes = computed(() => ({
+  notAsked: inProgramme(board.value?.notAsked ?? []),
+  asked: inProgramme(board.value?.asked ?? []),
+  received: inProgramme(board.value?.received ?? []),
+  suppressed: inProgramme(board.value?.suppressed ?? [])
+}))
+
 const stats = computed(() => [
   { key: 'notAsked', label: 'Not asked yet', n: counts.value.notAsked, icon: 'i-lucide-inbox', cls: 'text-zinc-600' },
   { key: 'asked', label: 'Asked', n: counts.value.asked, icon: 'i-lucide-send', cls: 'text-sky-600' },
@@ -57,10 +87,10 @@ const stats = computed(() => [
 ])
 
 const TABS = computed(() => [
-  { value: 'notAsked', label: `Not asked yet (${counts.value.notAsked})` },
-  { value: 'asked', label: `Asked (${counts.value.asked})` },
-  { value: 'received', label: `Received (${counts.value.received})` },
-  { value: 'held', label: `Held (${counts.value.held})` }
+  { value: 'notAsked', label: `Not asked yet (${lanes.value.notAsked.length})` },
+  { value: 'asked', label: `Asked (${lanes.value.asked.length})` },
+  { value: 'received', label: `Received (${lanes.value.received.length})` },
+  { value: 'held', label: `Held (${lanes.value.suppressed.length})` }
 ])
 
 /** Live line under the gate rule — what the rule is actually doing right now. */
@@ -134,7 +164,9 @@ function hold(row: ReviewRow) {
 async function reward({ row, code }: { row: ReviewRow; code: string }) {
   busy.value = row.id
   try {
-    const body: Record<string, unknown> = { value: 'Grab $10' }
+    // No hardcoded value — the server falls back to the programme's own reward.
+    const body: Record<string, unknown> = {}
+    if (row.rewardValue) body.value = row.rewardValue
     if (code) body.code = code
     await $fetch(`/api/shipments/${row.id}/reward`, { method: 'POST', body })
     await refresh()
@@ -190,6 +222,35 @@ async function reward({ row, code }: { row: ReviewRow; code: string }) {
         </template>
       </UAlert>
 
+      <!-- Programme filter — All, or one of the review programmes -->
+      <div v-if="programmes.length" class="shrink-0 flex flex-wrap items-center gap-1.5">
+        <span class="text-xs font-medium text-zinc-500 me-1">Programme</span>
+        <UButton
+          size="xs"
+          color="neutral"
+          :variant="programmeId === 'all' ? 'solid' : 'outline'"
+          label="All"
+          @click="programmeId = 'all'"
+        />
+        <UButton
+          v-for="p in programmes"
+          :key="p.id"
+          size="xs"
+          color="neutral"
+          :variant="programmeId === p.id ? 'solid' : 'outline'"
+          :icon="p.icon"
+          :label="p.short"
+          @click="programmeId = p.id"
+        />
+        <NuxtLink
+          v-if="programmeId !== 'all'"
+          :to="`/ops/rewards?programme=${programmeId}`"
+          class="text-xs font-medium text-primary-600 hover:underline ms-1"
+        >
+          Compare programmes →
+        </NuxtLink>
+      </div>
+
       <!-- phone: tabs -->
       <div class="lg:hidden">
         <UTabs
@@ -202,25 +263,25 @@ async function reward({ row, code }: { row: ReviewRow; code: string }) {
           class="mb-3"
           :ui="{ list: 'bg-zinc-100 w-full', trigger: 'flex-1' }"
         />
-        <OpsReviewColumn v-if="tab === 'notAsked'" kind="not_asked" :rows="board.notAsked" :busy="busy" @send="send" />
+        <OpsReviewColumn v-if="tab === 'notAsked'" kind="not_asked" :rows="lanes.notAsked" :busy="busy" @send="send" />
         <OpsReviewColumn
           v-else-if="tab === 'asked'"
           kind="asked"
-          :rows="board.asked"
+          :rows="lanes.asked"
           :busy="busy"
           @reask="reask"
           @suppress="suppress"
         />
-        <OpsReviewColumn v-else-if="tab === 'received'" kind="received" :rows="board.received" :busy="busy" @reward="reward" />
-        <OpsReviewColumn v-else kind="held" :rows="board.suppressed" :busy="busy" @release="release" @hold="hold" />
+        <OpsReviewColumn v-else-if="tab === 'received'" kind="received" :rows="lanes.received" :busy="busy" @reward="reward" />
+        <OpsReviewColumn v-else kind="held" :rows="lanes.suppressed" :busy="busy" @release="release" @hold="hold" />
       </div>
 
       <!-- desktop: four lanes -->
       <div class="hidden lg:grid lg:grid-cols-4 gap-4 items-start">
-        <OpsReviewColumn kind="not_asked" :rows="board.notAsked" :busy="busy" @send="send" />
-        <OpsReviewColumn kind="asked" :rows="board.asked" :busy="busy" @reask="reask" @suppress="suppress" />
-        <OpsReviewColumn kind="received" :rows="board.received" :busy="busy" @reward="reward" />
-        <OpsReviewColumn kind="held" :rows="board.suppressed" :busy="busy" @release="release" @hold="hold" />
+        <OpsReviewColumn kind="not_asked" :rows="lanes.notAsked" :busy="busy" @send="send" />
+        <OpsReviewColumn kind="asked" :rows="lanes.asked" :busy="busy" @reask="reask" @suppress="suppress" />
+        <OpsReviewColumn kind="received" :rows="lanes.received" :busy="busy" @reward="reward" />
+        <OpsReviewColumn kind="held" :rows="lanes.suppressed" :busy="busy" @release="release" @hold="hold" />
       </div>
     </template>
   </UDashboardPanel>

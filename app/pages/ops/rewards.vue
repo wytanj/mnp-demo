@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { OutboxEmail } from '#shared/utils/shipping'
-import { mailKindOf } from '#shared/utils/shipping'
+import type { OutboxEmail, ProgrammeId, ProgrammeStats, ReviewProgramme } from '#shared/utils/shipping'
+import { mailKindOf, REVIEW_PROGRAMMES } from '#shared/utils/shipping'
 import type { ReviewRow } from '~/components/ops/ReviewColumn.vue'
 
 /**
- * Review programme — the read-only view of the reward loop.
+ * Review programme — the read-only view of the reward loop, now per programme.
  * Every action (reminder / hold / release / approve a Google-Facebook proof)
- * lives on the Reviews board; this page shows what the programme produced:
+ * lives on the Reviews board; this page shows what each programme produced:
  * codes issued, proof still to verify, and the emails that actually went out.
  */
 definePageMeta({ layout: 'ops' })
@@ -17,6 +17,7 @@ interface ReviewBoard {
   asked: ReviewRow[]
   received: ReviewRow[]
   suppressed: ReviewRow[]
+  programmes: ProgrammeStats[]
   counts: {
     notAsked: number
     asked: number
@@ -31,7 +32,7 @@ interface ReviewBoard {
 }
 
 const EMPTY: ReviewBoard = {
-  notAsked: [], asked: [], received: [], suppressed: [],
+  notAsked: [], asked: [], received: [], suppressed: [], programmes: [],
   counts: {
     notAsked: 0, asked: 0, received: 0, held: 0, heldByClaim: 0,
     reminded: 0, issued: 0, awaitingVerification: 0, avgRating: null
@@ -41,27 +42,99 @@ const EMPTY: ReviewBoard = {
 const { data: board } = await useFetch<ReviewBoard>('/api/reviews', { default: () => EMPTY })
 
 /** The flyer / voucher mail the programme actually sent — same outbox as /ops/inbox. */
-const { data: outbox } = await useFetch<OutboxEmail[]>('/api/emails', {
+const { data: outboxAll } = await useFetch<OutboxEmail[]>('/api/emails', {
   default: () => [],
   transform: (rows) =>
     ((rows ?? []) as OutboxEmail[])
       .filter((e) => ['review', 'reward'].includes(mailKindOf(e)))
       .sort((a, b) => b.at.localeCompare(a.at))
-      .slice(0, 10)
 })
 
-const asked = computed(() => board.value?.asked ?? [])
-const received = computed(() => board.value?.received ?? [])
-const suppressed = computed(() => board.value?.suppressed ?? [])
-const counts = computed(() => board.value?.counts ?? EMPTY.counts)
+/* ------------------------------------------------------------------ *
+ * Programme selection — 'all' or one programme, deep-linkable as ?programme=
+ * ------------------------------------------------------------------ */
+
+/** Rules / labels / icons come from the shared definitions, stats from the API. */
+const definitions = computed<ReviewProgramme[]>(() => (REVIEW_PROGRAMMES ?? []) as ReviewProgramme[])
+
+function definitionOf(id?: string | null): ReviewProgramme | null {
+  return definitions.value.find((p) => p.id === id) ?? null
+}
+
+/** One card per programme even before the API has any stats to show. */
+const programmes = computed<ProgrammeStats[]>(() => {
+  const live = board.value?.programmes ?? []
+  if (live.length) return live
+  return definitions.value.map((p) => ({
+    id: p.id,
+    name: p.name,
+    short: p.short,
+    icon: p.icon,
+    color: p.color,
+    trigger: p.trigger,
+    rewardValue: p.reward.value,
+    jobs: 0, asked: 0, reminders: 0, pending: 0, scheduled: 0, held: 0, received: 0,
+    conversion: null, avgRating: null, fiveStar: 0, vouchers: 0, awaitingVerification: 0,
+    cost: 0, costPerReview: null
+  }))
+})
+
+const route = useRoute()
+const router = useRouter()
+
+function readQuery(): 'all' | ProgrammeId {
+  const q = route.query.programme
+  const id = Array.isArray(q) ? q[0] : q
+  return (id && id !== 'all' ? (id as ProgrammeId) : 'all')
+}
+
+const programmeId = ref<'all' | ProgrammeId>(readQuery())
+
+watch(programmeId, (id) => {
+  const query = { ...route.query }
+  if (id === 'all') delete query.programme
+  else query.programme = id
+  router.replace({ query })
+})
+
+const selected = computed(() => (programmeId.value === 'all' ? null : definitionOf(programmeId.value)))
+const selectedStats = computed(() => programmes.value.find((p) => p.id === programmeId.value) ?? null)
+const selectedReward = computed(() => selected.value?.reward.value ?? selectedStats.value?.rewardValue ?? null)
+
+const TABS = computed(() => [
+  { value: 'all', label: 'All programmes', icon: 'i-lucide-layers' },
+  ...programmes.value.map((p) => ({ value: p.id, label: p.short, icon: p.icon }))
+])
+
+/* ------------------------------------------------------------------ *
+ * Everything below reads the selected programme only ('all' = no filter)
+ * ------------------------------------------------------------------ */
+
+function keep(r: ReviewRow): boolean {
+  return programmeId.value === 'all' || r.programmeId === programmeId.value
+}
+
+const notAsked = computed(() => (board.value?.notAsked ?? []).filter(keep))
+const asked = computed(() => (board.value?.asked ?? []).filter(keep))
+const received = computed(() => (board.value?.received ?? []).filter(keep))
+const suppressed = computed(() => (board.value?.suppressed ?? []).filter(keep))
+
+/** Scheduled asks — a B2B delayed job whose ask is dated, not sent yet. */
+const scheduled = computed(() => notAsked.value.filter((r) => r.scheduledFor))
 
 /** Codes actually issued — auto for 5★, manual after CS verifies a screenshot. */
 const issued = computed(() => received.value.filter((r) => r.reward))
 
-/** Proof is in but no voucher yet — the customer is waiting on their Grab $10. */
+/** Proof is in but no voucher yet — the customer is waiting on their thank-you. */
 const awaiting = computed(() =>
   received.value.filter((r) => !r.reward && (r.screenshot || (r.platforms?.length ?? 0) > 0))
 )
+
+const avgRating = computed(() => {
+  const rated = received.value.filter((r) => r.rating)
+  if (!rated.length) return null
+  return Math.round((rated.reduce((n, r) => n + (r.rating ?? 0), 0) / rated.length) * 10) / 10
+})
 
 const stats = computed<Array<{ key: string; label: string; n: number; icon: string; cls: string; sub?: string | null }>>(() => [
   { key: 'asked', label: 'Pending asks', n: asked.value.length, icon: 'i-lucide-send', cls: 'text-sky-600' },
@@ -72,17 +145,56 @@ const stats = computed<Array<{ key: string; label: string; n: number; icon: stri
     n: received.value.length,
     icon: 'i-lucide-star',
     cls: 'text-amber-500',
-    sub: counts.value.avgRating ? `avg ${counts.value.avgRating}★` : null
+    sub: avgRating.value ? `avg ${avgRating.value}★` : null
   },
   { key: 'issued', label: 'Vouchers issued', n: issued.value.length, icon: 'i-lucide-gift', cls: 'text-emerald-600' }
 ])
 
-/** Job id → client name, so the outbox can name who an email went to. */
+/** Job id → client name / programme, so the outbox can name and filter its rows. */
+const rowsById = computed(() => {
+  const m: Record<string, ReviewRow> = {}
+  for (const lane of [board.value?.notAsked, board.value?.asked, board.value?.received, board.value?.suppressed])
+    for (const r of lane ?? []) m[r.id] = r
+  return m
+})
+
 const clientById = computed(() => {
   const m: Record<string, string> = {}
-  for (const lane of [board.value?.notAsked, board.value?.asked, board.value?.received, board.value?.suppressed])
-    for (const r of lane ?? []) m[r.id] = r.client
+  for (const [id, r] of Object.entries(rowsById.value)) m[id] = r.client
   return m
+})
+
+const outbox = computed(() =>
+  (outboxAll.value ?? [])
+    .filter((e) => programmeId.value === 'all' || rowsById.value[e.shipmentId]?.programmeId === programmeId.value)
+    .slice(0, 10)
+)
+
+const alertLine = computed(() => {
+  const heldByClaim = suppressed.value.filter((r) => r.claimOpen).length
+  const reminded = asked.value.filter((r) => r.reaskCount).length
+  const bits = [
+    `${notAsked.value.length} delivery awaiting an ask`,
+    `${heldByClaim} held by an open claim`,
+    `${reminded} reminded`,
+    `${awaiting.value.length} proof awaiting verification`
+  ]
+  if (scheduled.value.length) bits.splice(1, 0, `${scheduled.value.length} ask scheduled for later`)
+  return `${bits.join(' · ')}.`
+})
+
+/** One line the demo can read out: who converts best, who buys reviews cheapest. */
+const winner = computed(() => {
+  const converting = programmes.value.filter((p) => p.conversion !== null)
+  const priced = programmes.value.filter((p) => p.costPerReview !== null)
+  if (!converting.length && !priced.length) return null
+  const best = converting.slice().sort((a, b) => (b.conversion ?? 0) - (a.conversion ?? 0))[0]
+  const cheapest = priced.slice().sort((a, b) => (a.costPerReview ?? 0) - (b.costPerReview ?? 0))[0]
+  const bits: string[] = []
+  if (best) bits.push(`${best.short} converts best — ${best.conversion}% of asks come back as a review`)
+  if (cheapest && cheapest.vouchers) bits.push(`${cheapest.short} buys the cheapest review at SGD ${cheapest.costPerReview!.toFixed(2)}`)
+  else if (cheapest) bits.push(`${cheapest.short} has not paid for a review yet — SGD 0 so far`)
+  return bits.join(' · ') + '.'
 })
 
 /** Pending asks / Held read either as one row per job or folded under the client. */
@@ -100,17 +212,40 @@ const suppressedByClient = computed(() => {
   return Object.entries(g).sort((a, b) => a[0].localeCompare(b[0]))
 })
 
-const RULES = [
+/** Used until the shared programme definitions land — the original global rules. */
+const FALLBACK_RULES = [
   { icon: 'i-lucide-package-check', text: 'Ask goes out on delivery — the moment the customer signs off.' },
   { icon: 'i-lucide-shield-alert', text: 'Held automatically while a claim is open; CS releases it once the claim closes.' },
   { icon: 'i-lucide-bell-ring', text: '48h reminder, twice at most — then we stop chasing.' },
-  { icon: 'i-lucide-star', text: '5★ earns a Grab $10 thank-you code instantly, no CS step.' },
-  { icon: 'i-lucide-shield-check', text: 'Google / Facebook proof → CS verifies the screenshot → Grab $10.' }
+  { icon: 'i-lucide-star', text: '5★ earns the thank-you code instantly, no CS step.' },
+  { icon: 'i-lucide-shield-check', text: 'Google / Facebook proof → CS verifies the screenshot → voucher.' }
 ]
+
+const rules = computed(() => selected.value?.rules ?? definitions.value[0]?.rules ?? FALLBACK_RULES)
+const rulesTitle = computed(() => selected.value?.name ?? 'Programme rules')
+
+/** Nuxt UI colour → the few utility classes the strip paints by hand. */
+const BAR: Record<string, string> = {
+  primary: 'bg-primary-500', success: 'bg-emerald-500', info: 'bg-sky-500',
+  warning: 'bg-amber-500', neutral: 'bg-zinc-400', error: 'bg-rose-500'
+}
+const TONE: Record<string, string> = {
+  primary: 'text-primary-600', success: 'text-emerald-600', info: 'text-sky-600',
+  warning: 'text-amber-600', neutral: 'text-zinc-600', error: 'text-rose-600'
+}
+
+function colourOf(id?: string | null): ReviewProgramme['color'] {
+  return programmes.value.find((p) => p.id === id)?.color ?? definitionOf(id)?.color ?? 'neutral'
+}
 
 function when(at?: string): string {
   if (!at) return '—'
   return new Date(at).toLocaleString('en-SG', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+function day(at?: string): string {
+  if (!at) return '—'
+  return new Date(at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })
 }
 
 function stars(n?: number): string {
@@ -119,6 +254,10 @@ function stars(n?: number): string {
 
 function to(addr: string): string {
   return addr.replace(/\s*<.*>$/, '')
+}
+
+function money(n?: number | null): string {
+  return n === null || n === undefined ? '—' : `SGD ${n.toFixed(2)}`
 }
 
 const PLATFORM_LABEL: Record<string, string> = { google: 'Google', facebook: 'Facebook' }
@@ -148,28 +287,151 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
         </UPageCard>
       </div>
 
+      <!-- Programme switcher — everything below reads the selection -->
+      <div v-if="programmes.length" class="shrink-0 flex flex-wrap items-center gap-3">
+        <UTabs
+          v-model="programmeId"
+          :items="TABS"
+          :content="false"
+          color="primary"
+          variant="pill"
+          size="sm"
+          :ui="{ list: 'bg-zinc-100' }"
+        />
+        <span class="text-[11px] text-zinc-400">
+          {{ selected ? `${selected.audience} · ${selected.trigger}` : 'Three programmes running side by side' }}
+        </span>
+      </div>
+
+      <!-- Comparison strip — all three, always, the selected one ringed -->
+      <div v-if="programmes.length" class="shrink-0 space-y-2">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <button
+            v-for="p in programmes"
+            :key="p.id"
+            type="button"
+            class="rounded-xl border bg-white p-3 sm:p-4 text-left transition"
+            :class="programmeId === p.id
+              ? 'border-primary-300 ring-2 ring-primary-500/40'
+              : 'border-zinc-200 hover:border-zinc-300'"
+            @click="programmeId = p.id"
+          >
+            <div class="flex items-center gap-2">
+              <UIcon :name="p.icon" class="size-4 shrink-0" :class="TONE[p.color] ?? 'text-zinc-600'" />
+              <span class="text-sm font-semibold text-zinc-900 truncate">{{ p.short }}</span>
+              <UBadge :label="p.rewardValue" :color="p.color" variant="subtle" size="sm" class="ms-auto shrink-0" />
+            </div>
+            <p class="mt-0.5 text-[11px] text-zinc-400 truncate">{{ p.trigger }}</p>
+
+            <div class="mt-3 flex items-baseline gap-1.5">
+              <span class="text-2xl font-bold tabular-nums text-zinc-900">{{ p.conversion ?? '—' }}</span>
+              <span v-if="p.conversion !== null" class="text-sm font-semibold text-zinc-500">%</span>
+              <span class="text-[11px] text-zinc-500">ask → review</span>
+            </div>
+            <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+              <div
+                class="h-full rounded-full transition-all"
+                :class="BAR[p.color] ?? 'bg-zinc-400'"
+                :style="{ width: `${p.conversion ?? 0}%` }"
+              />
+            </div>
+
+            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+              <div class="flex items-baseline justify-between gap-2">
+                <dt class="text-zinc-500">Asks sent</dt>
+                <dd class="font-semibold tabular-nums text-zinc-800">{{ p.asked }}</dd>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <dt class="text-zinc-500">Reviews</dt>
+                <dd class="font-semibold tabular-nums text-zinc-800">{{ p.received }}</dd>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <dt class="text-zinc-500">Avg rating</dt>
+                <dd class="font-semibold tabular-nums text-amber-500">{{ p.avgRating ? `${p.avgRating}★` : '—' }}</dd>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <dt class="text-zinc-500">Vouchers</dt>
+                <dd class="font-semibold tabular-nums text-emerald-600">{{ p.vouchers }}</dd>
+              </div>
+              <div class="col-span-2 flex items-baseline justify-between gap-2 border-t border-zinc-100 pt-1.5">
+                <dt class="text-zinc-500">Cost per review</dt>
+                <dd class="font-semibold tabular-nums text-zinc-900">{{ money(p.costPerReview) }}</dd>
+              </div>
+            </dl>
+          </button>
+        </div>
+
+        <p v-if="winner" class="flex items-start gap-1.5 text-[11px] text-zinc-500">
+          <UIcon name="i-lucide-trophy" class="size-3.5 shrink-0 text-amber-500 mt-px" />
+          <span>{{ winner }}</span>
+        </p>
+      </div>
+
       <UAlert
         class="shrink-0"
         color="primary"
         variant="subtle"
         icon="i-lucide-info"
         title="The programme runs itself — CS only steps in to verify a public review or release a held ask."
-        :description="`${counts.notAsked} delivery awaiting an ask · ${counts.heldByClaim} held by an open claim · ${counts.reminded} reminded · ${counts.awaitingVerification} proof awaiting verification.`"
+        :description="alertLine"
         :ui="{ title: 'text-sm', description: 'text-xs' }"
       />
 
-      <!-- Programme rules -->
-      <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5' }">
+      <!-- Programme rules — the selected programme, or all three side by side -->
+      <UCard class="shrink-0" :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5' }">
         <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-list-checks" class="size-4 text-primary-600" />
-            <h2 class="text-sm font-semibold text-zinc-900">Programme rules</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <UIcon :name="selected?.icon ?? 'i-lucide-list-checks'" class="size-4 text-primary-600" />
+            <h2 class="text-sm font-semibold text-zinc-900">{{ rulesTitle }}</h2>
+            <UBadge
+              v-if="selected"
+              :label="selected.reward.value"
+              :color="selected.color"
+              variant="subtle"
+              size="sm"
+            />
             <UBadge label="Automatic" color="primary" variant="subtle" size="sm" class="ms-auto" />
           </div>
         </template>
 
-        <ul class="grid gap-2 sm:grid-cols-2">
-          <li v-for="r in RULES" :key="r.text" class="flex items-start gap-2">
+        <!-- one programme selected -->
+        <template v-if="selected">
+          <p class="mb-3 text-xs text-zinc-500">{{ selected.description }} · {{ selected.audience }}</p>
+          <ul class="grid gap-2 sm:grid-cols-2">
+            <li v-for="r in rules" :key="r.text" class="flex items-start gap-2">
+              <UIcon :name="r.icon" class="size-4 text-primary-500 mt-0.5 shrink-0" />
+              <span class="text-xs text-zinc-600 leading-relaxed">{{ r.text }}</span>
+            </li>
+          </ul>
+        </template>
+
+        <!-- all three, compact -->
+        <div v-else-if="definitions.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div v-for="p in definitions" :key="p.id" class="min-w-0">
+            <div class="flex items-center gap-2">
+              <UIcon :name="p.icon" class="size-4 shrink-0" :class="TONE[p.color] ?? 'text-zinc-600'" />
+              <h3 class="text-xs font-semibold text-zinc-900 truncate">{{ p.name }}</h3>
+            </div>
+            <p class="mt-1 text-[11px] text-zinc-500">{{ p.trigger }} · {{ p.reward.value }}</p>
+            <ul class="mt-2 space-y-1.5">
+              <li v-for="r in p.rules.slice(0, 2)" :key="r.text" class="flex items-start gap-2">
+                <UIcon :name="r.icon" class="size-3.5 text-primary-500 mt-0.5 shrink-0" />
+                <span class="text-[11px] text-zinc-600 leading-relaxed">{{ r.text }}</span>
+              </li>
+            </ul>
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              label="See all rules"
+              class="mt-1 -ms-2"
+              @click="programmeId = p.id"
+            />
+          </div>
+        </div>
+
+        <ul v-else class="grid gap-2 sm:grid-cols-2">
+          <li v-for="r in rules" :key="r.text" class="flex items-start gap-2">
             <UIcon :name="r.icon" class="size-4 text-primary-500 mt-0.5 shrink-0" />
             <span class="text-xs text-zinc-600 leading-relaxed">{{ r.text }}</span>
           </li>
@@ -177,7 +439,7 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
       </UCard>
 
       <!-- Codes issued -->
-      <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-0 sm:p-0' }">
+      <UCard class="shrink-0" :ui="{ header: 'p-4 sm:px-5', body: 'p-0 sm:p-0' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-ticket" class="size-4 text-emerald-600" />
@@ -196,6 +458,7 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
               <tr>
                 <th class="px-5 py-2.5 font-medium">Code</th>
                 <th class="px-3 py-2.5 font-medium">Value</th>
+                <th v-if="programmeId === 'all'" class="px-3 py-2.5 font-medium">Programme</th>
                 <th class="px-3 py-2.5 font-medium">Job</th>
                 <th class="px-3 py-2.5 font-medium">Customer</th>
                 <th class="px-3 py-2.5 font-medium">Rating</th>
@@ -208,7 +471,10 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
               <tr v-for="r in issued" :key="r.id" class="hover:bg-zinc-50">
                 <td class="px-5 py-2.5 font-mono text-xs font-semibold text-zinc-900">{{ r.reward!.code }}</td>
                 <td class="px-3 py-2.5 whitespace-nowrap">
-                  <UBadge :label="r.reward!.value ?? 'Grab $10'" color="success" variant="subtle" size="sm" />
+                  <UBadge :label="r.reward!.value ?? r.rewardValue ?? 'Voucher'" color="success" variant="subtle" size="sm" />
+                </td>
+                <td v-if="programmeId === 'all'" class="px-3 py-2.5 whitespace-nowrap">
+                  <UBadge v-if="r.programme" :label="r.programme" :color="colourOf(r.programmeId)" variant="subtle" size="sm" />
                 </td>
                 <td class="px-3 py-2.5">
                   <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
@@ -231,8 +497,8 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
         </div>
       </UCard>
 
-      <!-- Pending claim of reward — proof is in, the Grab $10 is not out yet -->
-      <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5' }">
+      <!-- Pending claim of reward — proof is in, the voucher is not out yet -->
+      <UCard class="shrink-0" :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-hourglass" class="size-4 text-primary-600" />
@@ -257,6 +523,13 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
               v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
               class="text-xs text-zinc-400 truncate"
             >{{ r.customerName }}</span>
+            <UBadge
+              v-if="programmeId === 'all' && r.programme"
+              :label="r.programme"
+              :color="colourOf(r.programmeId)"
+              variant="subtle"
+              size="sm"
+            />
             <span class="text-amber-500 text-sm">{{ stars(r.rating) }}</span>
             <span class="flex items-center gap-1.5">
               <UBadge
@@ -281,12 +554,12 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
           </li>
         </ul>
         <p class="mt-3 text-[11px] text-zinc-400">
-          Customer sent proof of a public review and is waiting on the Grab $10 — CS verifies the screenshot on the Reviews board.
+          Customer sent proof of a public review and is waiting on the {{ selectedReward ?? 'thank-you voucher' }} — CS verifies the screenshot on the Reviews board.
         </p>
       </UCard>
 
       <!-- Outbox strip -->
-      <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-0 sm:p-0', footer: 'p-3 sm:px-5' }">
+      <UCard class="shrink-0" :ui="{ header: 'p-4 sm:px-5', body: 'p-0 sm:p-0', footer: 'p-3 sm:px-5' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-mail" class="size-4 text-sky-600" />
@@ -328,7 +601,7 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
       </UCard>
 
       <!-- Pending / held -->
-      <div class="grid gap-4 lg:grid-cols-2 items-start">
+      <div class="grid gap-4 lg:grid-cols-2 items-start shrink-0">
         <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5', footer: 'p-3 sm:px-5' }">
           <template #header>
             <div class="flex items-center gap-2">
@@ -355,6 +628,25 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
             </div>
           </template>
 
+          <!-- B2B delayed: the ask is dated, not sent — it waits three days after delivery. -->
+          <div v-if="scheduled.length" class="mb-3 rounded-lg border border-zinc-200 bg-zinc-50 p-2.5">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Scheduled asks</p>
+            <ul class="mt-1.5 space-y-1.5">
+              <li v-for="r in scheduled" :key="r.id" class="flex flex-wrap items-baseline gap-2 text-sm">
+                <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
+                <span class="text-zinc-700 truncate">{{ r.title ?? r.client }}</span>
+                <UBadge
+                  v-if="programmeId === 'all' && r.programme"
+                  :label="r.programme"
+                  :color="colourOf(r.programmeId)"
+                  variant="subtle"
+                  size="sm"
+                />
+                <span class="ms-auto shrink-0 text-xs text-zinc-500">due {{ day(r.scheduledFor) }}</span>
+              </li>
+            </ul>
+          </div>
+
           <p v-if="!asked.length" class="text-sm text-zinc-500">No review asks are waiting on a reply.</p>
           <ul v-else-if="groupBy === 'job'" class="space-y-2">
             <li v-for="r in asked" :key="r.id" class="flex flex-wrap items-baseline gap-2 text-sm">
@@ -364,6 +656,13 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
                 v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
                 class="text-xs text-zinc-400 truncate"
               >{{ r.customerName }}</span>
+              <UBadge
+                v-if="programmeId === 'all' && r.programme"
+                :label="r.programme"
+                :color="colourOf(r.programmeId)"
+                variant="subtle"
+                size="sm"
+              />
               <UBadge v-if="r.reaskCount" :label="`Reminded ×${r.reaskCount}`" color="info" variant="subtle" size="sm" />
               <span class="ms-auto shrink-0 text-xs text-zinc-500">asked {{ when(r.askAt) }}</span>
             </li>
@@ -378,6 +677,13 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
                     v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
                     class="text-xs text-zinc-400 truncate"
                   >{{ r.customerName }}</span>
+                  <UBadge
+                    v-if="programmeId === 'all' && r.programme"
+                    :label="r.programme"
+                    :color="colourOf(r.programmeId)"
+                    variant="subtle"
+                    size="sm"
+                  />
                   <UBadge v-if="r.reaskCount" :label="`Reminded ×${r.reaskCount}`" color="info" variant="subtle" size="sm" />
                   <span class="ms-auto shrink-0 text-xs text-zinc-500">asked {{ when(r.askAt) }}</span>
                 </li>
@@ -409,6 +715,13 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
                   v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
                   class="text-xs text-zinc-400 truncate"
                 >{{ r.customerName }}</span>
+                <UBadge
+                  v-if="programmeId === 'all' && r.programme"
+                  :label="r.programme"
+                  :color="colourOf(r.programmeId)"
+                  variant="subtle"
+                  size="sm"
+                />
                 <UBadge v-if="r.claimLabel" :label="r.claimLabel" color="error" variant="subtle" size="sm" />
                 <span class="ms-auto shrink-0 text-xs text-zinc-500">{{ when(r.deliveredAt) }}</span>
               </div>
@@ -426,6 +739,13 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
                       v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
                       class="text-xs text-zinc-400 truncate"
                     >{{ r.customerName }}</span>
+                    <UBadge
+                      v-if="programmeId === 'all' && r.programme"
+                      :label="r.programme"
+                      :color="colourOf(r.programmeId)"
+                      variant="subtle"
+                      size="sm"
+                    />
                     <UBadge v-if="r.claimLabel" :label="r.claimLabel" color="error" variant="subtle" size="sm" />
                     <span class="ms-auto shrink-0 text-xs text-zinc-500">{{ when(r.deliveredAt) }}</span>
                   </div>

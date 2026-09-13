@@ -9,6 +9,7 @@ import {
   customsReady,
   declarationGaps,
   docsDone,
+  programmeOf,
   reviewAskDecision
 } from '#shared/utils/shipping'
 
@@ -96,6 +97,11 @@ function slim(s: Shipment) {
         }
       : null,
     signedOff: s.signoff ? `by ${s.signoff.name} at ${fmtSgWhen(s.signoff.at)}` : null,
+    programme: {
+      id: programmeOf(s).id,
+      name: programmeOf(s).name,
+      reward: programmeOf(s).reward
+    },
     review: s.review ? { rating: s.review.rating, comment: s.review.comment, helpedBy: s.review.helpedBy, rewardSent: !!s.review.reward } : null,
     reviewAsk: s.reviewAsk
       ? {
@@ -105,7 +111,8 @@ function slim(s: Shipment) {
           reason: s.reviewAsk.reason,
           reminders: s.reviewAsk.reaskCount ?? 0,
           lastReminderAt: s.reviewAsk.reaskAt,
-          nextReminderDue: s.reviewAsk.reaskDueAt
+          nextReminderDue: s.reviewAsk.reaskDueAt,
+          scheduledFor: s.reviewAsk.scheduledFor
         }
       : null,
     timeline: s.events.map((e) => ({
@@ -227,6 +234,11 @@ const TOOLS = [
     }
   },
   {
+    name: 'review_programme_stats',
+    description: "Compare the three M&P review programmes side by side — 5\u2605 auto Grab $10, public review screenshot, and the B2B delayed ask. Returns per programme: delivered jobs on it, asks sent, reminders, asks still scheduled, held asks, reviews received, conversion %, average rating, vouchers issued, reviews awaiting CS verification, voucher spend in SGD and cost per review. Use it to answer \"which review programme is working?\".",
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'issue_reward',
     description: 'Issue the thank-you voucher on a shipment that already has a review: generates an MP-THANKS- code if none is given, records it on the job and emails the customer the voucher. Fails if there is no review yet or a reward was already sent.',
     inputSchema: {
@@ -234,7 +246,7 @@ const TOOLS = [
       properties: {
         shipmentId: { type: 'string', description: 'Shipment id, e.g. MP-8110-AF' },
         code: { type: 'string', description: 'Optional voucher code — generated (MP-THANKS-…) when omitted' },
-        value: { type: 'string', description: 'Optional voucher value, defaults to "Grab $10"' }
+        value: { type: 'string', description: "Optional voucher value — defaults to whatever the job's review programme pays out (Grab $10, or SGD 20 off next booking on B2B)" }
       },
       required: ['shipmentId']
     }
@@ -317,6 +329,16 @@ async function callTool(name: string, args: any): Promise<string> {
             : `Review ask unanswered — ${reminders} reminder(s) sent, a 48h reminder can still go out`,
           askedAt: s.reviewAsk.at,
           nextReminderDue: s.reviewAsk.reaskDueAt
+        })
+      }
+      if (!s.review && s.reviewAsk?.state === 'not_yet' && s.reviewAsk.scheduledFor) {
+        actions.push({
+          bucket: 'reviews',
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: `Review ask scheduled for ${fmtAskDate(s.reviewAsk.scheduledFor)} (${programmeOf(s).name}) — nothing has been emailed yet. CS can send it early from /ops/reviews.`,
+          scheduledFor: s.reviewAsk.scheduledFor,
+          programme: programmeOf(s).name
         })
       }
       if (!s.review && !s.reviewAsk && (s.status === 'delivered' || s.signoff)) {
@@ -553,6 +575,18 @@ async function callTool(name: string, args: any): Promise<string> {
     return `WhatsApp sent to ${thread.contactName} (${thread.contactHandle}) on ${shipment.id} and logged on the job timeline (simulated for this demo). Thread is now "waiting on them".\n\nSent: ${text}`
   }
 
+  if (name === 'review_programme_stats') {
+    const rows = programmeStats(shipments)
+    const lines = rows.map((p) => [
+      `${p.short} — ${p.name}`,
+      `  trigger: ${p.trigger} · reward: ${p.rewardValue}`,
+      `  delivered jobs: ${p.jobs} · asks sent: ${p.asked} · reminders: ${p.reminders} · scheduled: ${p.scheduled} · held: ${p.held}`,
+      `  reviews received: ${p.received} · conversion: ${p.conversion === null ? 'n/a' : `${p.conversion}%`} · avg rating: ${p.avgRating ?? 'n/a'} · 5-star: ${p.fiveStar}`,
+      `  vouchers issued: ${p.vouchers} · awaiting CS verification: ${p.awaitingVerification} · spend: SGD ${p.cost} · cost per review: ${p.costPerReview === null ? 'n/a' : `SGD ${p.costPerReview}`}`
+    ].join('\n')).join('\n\n')
+    return `M&P review programmes — one job runs on exactly one programme.\n\n${lines}\n\n${JSON.stringify(rows, null, 2)}`
+  }
+
   if (name === 'draft_review_ask' || name === 'hold_review_for_claim' || name === 'issue_reward') {
     const shipment = shipments.find((x) => x.id === String(args?.shipmentId ?? '').toUpperCase())
     if (!shipment) {
@@ -566,6 +600,12 @@ async function callTool(name: string, args: any): Promise<string> {
         shipment: shipment.id,
         client: shipment.company ?? shipment.customerName,
         delivered: deliveredAtOf(shipment) ?? null,
+        programme: {
+          id: programmeOf(shipment).id,
+          name: programmeOf(shipment).name,
+          trigger: programmeOf(shipment).trigger,
+          reward: programmeOf(shipment).reward
+        },
         gate: decision.send
           ? { canSend: true, rule: 'Delivered, no open claim, no ask outstanding — the ask may go out.' }
           : { canSend: false, blockedBecause: decision.reason },
@@ -575,6 +615,7 @@ async function callTool(name: string, args: any): Promise<string> {
               sentAt: shipment.reviewAsk.at,
               reminders: shipment.reviewAsk.reaskCount ?? 0,
               nextReminderDue: shipment.reviewAsk.reaskDueAt,
+              scheduledFor: shipment.reviewAsk.scheduledFor,
               heldReason: shipment.reviewAsk.reason
             }
           : { state: 'not_yet' },
@@ -613,8 +654,9 @@ async function callTool(name: string, args: any): Promise<string> {
     if (shipment.review.reward) {
       return `${shipment.id} already had voucher ${shipment.review.reward.code} (${shipment.review.reward.value ?? 'Grab $10'}) issued on ${shipment.review.reward.at}.`
     }
+    const programme = programmeOf(shipment)
     const code = String(args?.code ?? '').trim() || thanksCode(shipment.id)
-    const value = String(args?.value ?? 'Grab $10').trim() || 'Grab $10'
+    const value = String(args?.value ?? '').trim() || programme.reward.value
     shipment.review.reward = { code, at: new Date().toISOString(), value }
     addEvent(shipment, {
       type: 'note',

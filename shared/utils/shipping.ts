@@ -146,6 +146,8 @@ export interface ReviewAsk {
   reaskAt?: string
   reaskCount?: number
   reaskDueAt?: string
+  /** Delayed programmes (B2B): the ask is queued, not sent — ISO date it is due. */
+  scheduledFor?: string
 }
 
 export interface QuoteUpdate {
@@ -206,6 +208,8 @@ export interface Shipment {
   claim?: ShipmentClaim
   customs?: ShipmentCustoms
   reviewAsk?: ReviewAsk
+  /** Which review programme this job is enrolled in — see REVIEW_PROGRAMMES. */
+  programmeId?: ProgrammeId
   // People who have written in about this job — booking address plus any
   // Gmail / SingNet / colleague domain that later attached itself.
   contacts?: ShipmentContact[]
@@ -375,6 +379,140 @@ export function reviewAskDecision(
   if (s.reviewAsk?.state === 'sent') return { send: false, reason: 'Review request already sent' }
   if (s.reviewAsk?.state === 'answered') return { send: false, reason: 'Review request already answered' }
   return { send: true }
+}
+
+// ---------------------------------------------------------------------------
+// Review programmes — one job, one programme. Which ask goes out, when it goes
+// out, and what the customer gets back all hang off this table.
+// ---------------------------------------------------------------------------
+
+export type ProgrammeId = 'auto5' | 'proof' | 'b2b-delayed'
+
+/**
+ * How the voucher is earned:
+ *   five_star      — 5★ issues it on the spot, no CS step
+ *   verified_proof — CS eyeballs the public-review screenshot first
+ *   manual         — the account manager credits it by hand
+ */
+export type RewardAuto = 'five_star' | 'verified_proof' | 'manual'
+
+export interface ReviewProgramme {
+  id: ProgrammeId
+  name: string
+  short: string
+  description: string
+  icon: string
+  color: 'primary' | 'success' | 'info' | 'warning' | 'neutral' | 'error'
+  audience: string
+  trigger: string
+  /** Days after delivery before the ask goes out. 0 = on sign-off. */
+  delayDays: number
+  reward: { value: string; cost: number; auto: RewardAuto }
+  rules: Array<{ icon: string; text: string }>
+}
+
+export const REVIEW_PROGRAMMES: ReviewProgramme[] = [
+  {
+    id: 'auto5',
+    name: '5★ auto Grab $10',
+    short: 'Auto 5★',
+    description: 'Ask on sign-off; a 5★ pays itself out instantly, anything lower goes to CS.',
+    icon: 'i-lucide-zap',
+    color: 'primary',
+    audience: 'B2C & B2Self deliveries',
+    trigger: 'On delivery sign-off',
+    delayDays: 0,
+    reward: { value: 'Grab $10', cost: 10, auto: 'five_star' },
+    rules: [
+      { icon: 'i-lucide-package-check', text: 'Ask goes out on delivery — the moment the customer signs off.' },
+      { icon: 'i-lucide-star', text: '5★ earns a Grab $10 thank-you code instantly, no CS step.' },
+      { icon: 'i-lucide-message-circle-warning', text: '1–4★ lands on the CS desk instead — we fix it before we ask again.' },
+      { icon: 'i-lucide-bell-ring', text: '48h reminder, twice at most — then we stop chasing.' },
+      { icon: 'i-lucide-shield-alert', text: 'Held automatically while a claim is open; CS releases it once the claim closes.' }
+    ]
+  },
+  {
+    id: 'proof',
+    name: 'Public review screenshot',
+    short: 'Public proof',
+    description: 'For accounts whose word carries publicly — screenshot the Google or Facebook review, CS verifies, voucher goes out.',
+    icon: 'i-lucide-shield-check',
+    color: 'success',
+    audience: 'B2B accounts with public presence',
+    trigger: 'On delivery sign-off',
+    delayDays: 0,
+    reward: { value: 'Grab $10', cost: 10, auto: 'verified_proof' },
+    rules: [
+      { icon: 'i-lucide-package-check', text: 'Ask goes out on delivery, with the Google and Facebook links in it.' },
+      { icon: 'i-lucide-image-up', text: 'Customer uploads a screenshot of their public review to claim.' },
+      { icon: 'i-lucide-shield-check', text: 'CS eyeballs the screenshot before any code leaves — never auto-issued.' },
+      { icon: 'i-lucide-ticket', text: 'Verified proof → Grab $10, same day.' },
+      { icon: 'i-lucide-bell-ring', text: '48h reminder, twice at most — then we stop chasing.' }
+    ]
+  },
+  {
+    id: 'b2b-delayed',
+    name: 'B2B delayed ask',
+    short: 'B2B delayed',
+    description: 'Big accounts get three quiet days first — the invoice and any short-shipment land before we ask.',
+    icon: 'i-lucide-calendar-clock',
+    color: 'info',
+    audience: 'B2B accounts (PO jobs)',
+    trigger: '3 days after delivery',
+    delayDays: 3,
+    reward: { value: 'SGD 20 off next booking', cost: 20, auto: 'manual' },
+    rules: [
+      { icon: 'i-lucide-calendar-clock', text: 'Ask waits 3 days — the invoice and any short-shipment land first.' },
+      { icon: 'i-lucide-mail-check', text: 'One ask per PO job, never per drop — nobody wants five emails from us.' },
+      { icon: 'i-lucide-badge-percent', text: 'Reward is SGD 20 off the next booking, credited to the account.' },
+      { icon: 'i-lucide-user-check', text: 'No auto-issue — the account manager approves every credit.' },
+      { icon: 'i-lucide-shield-alert', text: 'Open claim or fee dispute parks the ask until it is closed.' }
+    ]
+  }
+]
+
+export const DEFAULT_PROGRAMME_ID: ProgrammeId = 'auto5'
+
+/** Programme by id — anything unknown falls back to the 5★ auto programme. */
+export function programmeById(id?: string | null): ReviewProgramme {
+  return (
+    REVIEW_PROGRAMMES.find((p) => p.id === id) ??
+    REVIEW_PROGRAMMES.find((p) => p.id === DEFAULT_PROGRAMME_ID)!
+  )
+}
+
+/**
+ * Which programme a job runs on. An explicit `programmeId` wins; otherwise B2B
+ * jobs go on the delayed ask and everything else on the 5★ auto programme.
+ */
+export function programmeOf(s: Pick<Shipment, 'programmeId' | 'mode'>): ReviewProgramme {
+  if (s.programmeId) return programmeById(s.programmeId)
+  return programmeById(s.mode === 'b2b' ? 'b2b-delayed' : DEFAULT_PROGRAMME_ID)
+}
+
+/** One programme's numbers on the Reviews / Rewards boards — see programmeStats(). */
+export interface ProgrammeStats {
+  id: ProgrammeId
+  name: string
+  short: string
+  icon: string
+  color: ReviewProgramme['color']
+  trigger: string
+  rewardValue: string
+  jobs: number
+  asked: number
+  reminders: number
+  pending: number
+  scheduled: number
+  held: number
+  received: number
+  conversion: number | null
+  avgRating: number | null
+  fiveStar: number
+  vouchers: number
+  awaitingVerification: number
+  cost: number
+  costPerReview: number | null
 }
 
 // ---------------------------------------------------------------------------

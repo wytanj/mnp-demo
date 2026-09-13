@@ -1,3 +1,5 @@
+import { programmeOf } from '#shared/utils/shipping'
+
 /**
  * Issue the thank-you voucher on a review that already landed.
  *
@@ -16,8 +18,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
+  const fallbackValue = programmeOf(shipment).reward.value
   const code = String(body?.code ?? '').trim() || thanksCode(shipment.id)
-  const value = String(body?.value ?? 'Grab $10').trim() || 'Grab $10'
+  const value = String(body?.value ?? '').trim() || fallbackValue
 
   shipment.review.reward = { code, at: new Date().toISOString(), value }
   addEvent(shipment, {

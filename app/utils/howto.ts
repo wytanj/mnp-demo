@@ -185,15 +185,18 @@ export const HOWTO: Record<HowToKey, HowTo> = {
 
   'ops-rewards': {
     title: 'Review programme',
-    what: 'The programme end to end — the rules it runs on, the codes issued, the proof still to verify, and every email it sent.',
+    what: 'Three review programmes side by side — the rules each runs on, the codes issued, the proof still to verify, and every email they sent.',
     click: [
-      'Read the Programme rules card out loud: ask on delivery, hold on claim, 48h reminder ×2, 5★ → instant Grab $10.',
-      'Reward codes issued — MP-8101-AF and MP-8112-HF got their voucher the second the 5★ landed, no CS step.',
-      'Pending claim of reward — the Google/Facebook proof CS still has to verify before the Grab $10 goes out.',
+      'Flip between the three programmes — Auto 5★, Public proof, B2B delayed — and read the comparison strip: ask→review % and cost per review differ, that\'s the point.',
+      'Stay on All programmes first: the strip names the best converter and the cheapest review; every card below then filters to whichever tab you pick.',
+      'Open Auto 5★ and read its rules: ask on delivery, hold on claim, 48h reminder ×2, 5★ → instant Grab $10 with no CS step (MP-8101-AF, MP-8112-HF).',
+      'Open Public proof — MP-8118-HF got its voucher only after CS verified the Facebook screenshot; Pending claim of reward is the queue that step comes from.',
+      'Open B2B delayed — the reward is SGD 20 off the next booking and the ask waits three days, so it sits under Scheduled asks until it is due.',
       'Programme outbox — the actual review asks and voucher emails, then follow the link into the ops Inbox.'
     ],
     say: [
-      'The ask, the reminder, the hold and the thank-you are one flow — CS never has to remember any of it.'
+      'The ask, the reminder, the hold and the thank-you are one flow — CS never has to remember any of it.',
+      'Three programmes, one engine: change the trigger, the audience and the reward and you can see which one actually buys reviews cheapest.'
     ]
   },
 

@@ -79,11 +79,17 @@ export default defineEventHandler(async (event) => {
     const email = buildReviewEmail(shipment, at)
     await sendEmail(email)
     await dbSaveEmail(email)
+    // A CS send overrides a delayed programme's queue — the ask is out now.
+    const wasScheduled = !!shipment.reviewAsk?.scheduledFor
     shipment.reviewAsk = { state: 'sent', trigger: shipment.reviewAsk?.trigger ?? 'delivered', at }
     addEvent(shipment, {
       type: 'note',
       actor: 'cs',
-      note: action === 'release' ? '⭐ Held review request released and sent' : '⭐ Review request sent',
+      note: action === 'release'
+        ? '⭐ Held review request released and sent'
+        : wasScheduled
+          ? '⭐ Review request sent early — CS overrode the scheduled ask'
+          : '⭐ Review request sent',
       at
     })
     await dbSaveShipment(shipment)

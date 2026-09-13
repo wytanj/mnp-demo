@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ClaimType } from '#shared/utils/shipping'
+import type { ClaimType, ProgrammeId } from '#shared/utils/shipping'
 
 export interface ReviewRow {
   id: string
@@ -26,6 +26,12 @@ export interface ReviewRow {
   claimLabel?: string
   claimOpen?: boolean
   gate?: string
+  /** Which review programme the job runs under — see REVIEW_PROGRAMMES. */
+  programmeId?: ProgrammeId
+  programme?: string
+  rewardValue?: string
+  /** Set while the ask is dated but not sent yet (B2B delayed programme). */
+  scheduledFor?: string
 }
 
 export type ReviewLane = 'not_asked' | 'asked' | 'received' | 'held'
@@ -129,17 +135,32 @@ function confirmHold(r: ReviewRow) {
             <p class="text-sm font-semibold text-zinc-900 truncate">{{ r.client }}</p>
             <p class="text-[11px] text-zinc-500 truncate">{{ name(r.contact) }}</p>
           </div>
-          <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-[11px] font-bold text-zinc-500 hover:text-primary-600 shrink-0">
-            {{ r.id }}
-          </NuxtLink>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-[11px] font-bold text-zinc-500 hover:text-primary-600">
+              {{ r.id }}
+            </NuxtLink>
+            <UBadge v-if="r.programme" :label="r.programme" color="neutral" variant="subtle" size="sm" />
+          </div>
         </div>
 
         <!-- NOT ASKED YET -->
         <template v-if="kind === 'not_asked'">
           <dl class="mt-2 text-[11px] text-zinc-500 space-y-0.5">
             <div class="flex gap-2"><dt class="w-20 shrink-0">Delivered</dt><dd>{{ when(r.deliveredAt) }}</dd></div>
-            <div class="flex gap-2"><dt class="w-20 shrink-0">Ask</dt><dd>never sent</dd></div>
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0">Ask</dt>
+              <dd>{{ r.scheduledFor ? `scheduled for ${day(r.scheduledFor)}` : 'never sent' }}</dd>
+            </div>
           </dl>
+          <UBadge
+            v-if="r.scheduledFor"
+            :label="`Ask due ${day(r.scheduledFor)}`"
+            color="info"
+            variant="subtle"
+            size="sm"
+            icon="i-lucide-calendar-clock"
+            class="mt-2"
+          />
           <div class="mt-2.5 flex gap-2">
             <UButton
               icon="i-lucide-send"

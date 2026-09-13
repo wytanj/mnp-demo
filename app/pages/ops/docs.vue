@@ -83,6 +83,7 @@ function when(iso?: string): string {
             size="xs"
             :ui="{ list: 'bg-zinc-100' }"
           />
+          <DemoHowTo page="ops-docs" />
         </template>
       </UDashboardNavbar>
     </template>

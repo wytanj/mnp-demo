@@ -15,7 +15,8 @@
           </span>
           <span class="text-[11px] font-bold uppercase tracking-wide text-[#F17421]">Driver</span>
         </NuxtLink>
-        <NuxtLink to="/" class="ms-auto text-xs font-semibold text-white/60 hover:text-white">Doors</NuxtLink>
+        <DemoHowTo page="driver" tone="dark" class="ms-auto" />
+        <NuxtLink to="/" class="text-xs font-semibold text-white/60 hover:text-white">Doors</NuxtLink>
       </div>
     </header>
     <div class="mx-auto max-w-[480px]">

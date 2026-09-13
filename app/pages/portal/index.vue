@@ -39,9 +39,10 @@ const delivered = computed(() => list.value.filter((j) => j.status === 'delivere
           {{ PORTAL_CLIENT.company }} — everything you have moving with M&amp;P.
         </p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
         <UButton to="/portal/track" icon="i-lucide-search" color="neutral" variant="outline">Track by job id</UButton>
         <UButton to="/portal/quote" icon="i-lucide-calculator">Request a quote</UButton>
+        <DemoHowTo page="portal-home" />
       </div>
     </div>
 

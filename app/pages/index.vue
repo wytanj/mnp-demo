@@ -33,6 +33,7 @@ const doors = [
         <span class="block text-sm font-bold tracking-tight">M&amp;P International Freights</span>
         <span class="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F17421]">Tuesday live demo</span>
       </span>
+      <DemoHowTo page="doors" tone="dark" class="ms-auto" />
     </header>
 
     <main class="flex-1 flex items-center px-6 sm:px-10 py-10">

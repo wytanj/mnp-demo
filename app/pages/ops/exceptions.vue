@@ -104,6 +104,7 @@ function rel(iso: string): string {
           <UButton to="/ops/jobs" color="neutral" variant="outline" size="sm" icon="i-lucide-boxes">
             <span class="hidden sm:inline">All jobs</span>
           </UButton>
+          <DemoHowTo page="ops-exceptions" />
         </template>
       </UDashboardNavbar>
     </template>

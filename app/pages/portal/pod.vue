@@ -30,10 +30,15 @@ const REVIEW_LABELS: Record<PortalJob['reviewState'], string> = {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold tracking-tight">POD / review</h1>
-    <p class="mt-1 text-sm text-zinc-500">
-      Every signed delivery, the proof behind it, and where your feedback stands.
-    </p>
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">POD / review</h1>
+        <p class="mt-1 text-sm text-zinc-500">
+          Every signed delivery, the proof behind it, and where your feedback stands.
+        </p>
+      </div>
+      <DemoHowTo page="portal-pod" />
+    </div>
 
     <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
       <PortalStatTile

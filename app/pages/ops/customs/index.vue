@@ -113,6 +113,7 @@ function rel(iso: string): string {
           <UButton to="/ops/exceptions" color="neutral" variant="outline" size="sm" icon="i-lucide-triangle-alert">
             <span class="hidden sm:inline">Exceptions</span>
           </UButton>
+          <DemoHowTo page="ops-customs" />
         </template>
       </UDashboardNavbar>
     </template>

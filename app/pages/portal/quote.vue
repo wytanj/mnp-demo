@@ -156,9 +156,12 @@ const STATUS_LABELS: Record<QuoteRequest['status'], string> = {
           Tell us the lane — you get an indicative rate on screen straight away, and a person follows with the firm quotation.
         </p>
       </div>
-      <UButton color="neutral" variant="ghost" icon="i-lucide-wand-2" size="sm" @click="prefill">
-        Fill an example lane
-      </UButton>
+      <div class="flex items-center gap-2">
+        <UButton color="neutral" variant="ghost" icon="i-lucide-wand-2" size="sm" @click="prefill">
+          Fill an example lane
+        </UButton>
+        <DemoHowTo page="portal-quote" />
+      </div>
     </div>
 
     <div class="mt-5 grid gap-4 lg:grid-cols-5">

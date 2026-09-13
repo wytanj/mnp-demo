@@ -103,6 +103,7 @@ async function onCreated(created: QuoteRequest) {
       <UDashboardNavbar title="Quotes" icon="i-lucide-file-text">
         <template #right>
           <UButton icon="i-lucide-plus" color="primary" size="sm" label="New request" @click="showForm = true" />
+          <DemoHowTo page="ops-quotes" />
         </template>
       </UDashboardNavbar>
     </template>

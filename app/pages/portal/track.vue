@@ -51,10 +51,15 @@ function pick(id: string) {
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold tracking-tight">Track a shipment</h1>
-    <p class="mt-1 text-sm text-zinc-500">
-      Live status, timeline, photos and documents — no login needed to share the link.
-    </p>
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Track a shipment</h1>
+        <p class="mt-1 text-sm text-zinc-500">
+          Live status, timeline, photos and documents — no login needed to share the link.
+        </p>
+      </div>
+      <DemoHowTo page="portal-track" />
+    </div>
 
     <UCard class="mt-5" :ui="{ body: 'p-5 sm:p-7' }">
       <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="go">

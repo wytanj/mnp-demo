@@ -153,6 +153,7 @@ onBeforeUnmount(() => clearInterval(timer))
               <UButton icon="i-lucide-x" color="neutral" variant="link" size="xs" @click="search = ''" />
             </template>
           </UInput>
+          <DemoHowTo page="ops-inbox" />
         </template>
       </UDashboardNavbar>
     </template>

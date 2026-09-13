@@ -109,6 +109,7 @@ async function copy(text: string, what = 'Copied') {
             :icon="probe.ok ? 'i-lucide-circle-check' : 'i-lucide-circle-x'"
           />
           <UButton icon="i-lucide-refresh-cw" color="neutral" variant="ghost" size="sm" :loading="probeStatus === 'pending'" @click="reprobe()" />
+          <DemoHowTo page="ops-agent" />
         </template>
       </UDashboardNavbar>
     </template>

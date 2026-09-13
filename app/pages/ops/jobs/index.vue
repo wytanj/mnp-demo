@@ -280,6 +280,7 @@ async function createShipment() {
           <UButton icon="i-lucide-plus" color="primary" @click="showForm = true">
             New booking
           </UButton>
+          <DemoHowTo page="ops-jobs" />
         </template>
       </UDashboardNavbar>
     </template>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 const links = [
-  { label: 'My shipments', to: '/portal' },
-  { label: 'Track', to: '/portal/track' },
-  { label: 'Request quote', to: '/portal/quote' },
-  { label: 'POD / review', to: '/portal/pod' }
+  { label: "My shipments", to: "/portal" },
+  { label: "Track", to: "/portal/track" },
+  { label: "Request quote", to: "/portal/quote" },
+  { label: "POD / review", to: "/portal/pod" }
 ]
 </script>
 
@@ -31,12 +31,18 @@ const links = [
           >{{ l.label }}</NuxtLink>
         </nav>
 
-        <div class="ms-auto hidden md:flex items-center gap-2 shrink-0 rounded-full bg-zinc-100 ps-1 pe-3 py-1">
-          <span class="grid place-items-center size-7 rounded-full bg-[#F17421] text-white text-[11px] font-bold">MT</span>
-          <span class="text-xs leading-tight">
-            <span class="block font-semibold">Melissa Tan</span>
-            <span class="block text-zinc-500">Allmighty Foods</span>
-          </span>
+        <div class="ms-auto flex items-center gap-2 sm:gap-3 shrink-0">
+          <NuxtLink
+            to="/"
+            class="rounded-full px-3 py-1.5 text-xs sm:text-sm font-semibold text-zinc-500 hover:text-[#F17421] hover:bg-[#FDEADD] transition-colors"
+          >← Doors</NuxtLink>
+          <div class="hidden md:flex items-center gap-2 rounded-full bg-zinc-100 ps-1 pe-3 py-1">
+            <span class="grid place-items-center size-7 rounded-full bg-[#F17421] text-white text-[11px] font-bold">MT</span>
+            <span class="text-xs leading-tight">
+              <span class="block font-semibold">Melissa Tan</span>
+              <span class="block text-zinc-500">Allmighty Foods</span>
+            </span>
+          </div>
         </div>
       </div>
     </header>

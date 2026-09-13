@@ -13,16 +13,39 @@ const TOOLS = [
   { value: 'list_partner_waits', label: 'list_partner_waits — who we are waiting on' },
   { value: 'list_exceptions', label: 'list_exceptions — what is going wrong now' },
   { value: 'list_shipments', label: 'list_shipments — the whole book' },
-  { value: 'get_shipment', label: 'get_shipment — one job, in full' }
+  { value: 'get_shipment', label: 'get_shipment — one job, in full' },
+  { value: 'draft_review_ask', label: 'draft_review_ask — preview the review email + gate (sends nothing)' },
+  { value: 'hold_review_for_claim', label: 'hold_review_for_claim — park an ask with a reason (writes)' },
+  { value: 'issue_reward', label: 'issue_reward — issue the thank-you voucher (writes + emails)' }
 ]
+
+/** Which argument each tool needs, and whether running it changes the book. */
+const ID_ARG: Record<string, 'id' | 'shipmentId'> = {
+  get_shipment: 'id',
+  draft_review_ask: 'shipmentId',
+  hold_review_for_claim: 'shipmentId',
+  issue_reward: 'shipmentId'
+}
+const WRITES = ['hold_review_for_claim', 'issue_reward']
 
 const tool = ref('list_customs_gaps')
 const shipmentId = ref('MP-3318-MC')
+const reason = ref('Damage claim open')
 const running = ref(false)
 const output = ref('')
 const failed = ref(false)
 
-const needsId = computed(() => tool.value === 'get_shipment')
+const needsId = computed(() => !!ID_ARG[tool.value])
+const needsReason = computed(() => tool.value === 'hold_review_for_claim')
+const writes = computed(() => WRITES.includes(tool.value))
+
+function argsFor(): Record<string, string> {
+  const key = ID_ARG[tool.value]
+  if (!key) return {}
+  const args: Record<string, string> = { [key]: shipmentId.value.trim().toUpperCase() }
+  if (needsReason.value) args.reason = reason.value.trim() || 'Held by CS'
+  return args
+}
 
 async function run() {
   running.value = true
@@ -37,7 +60,7 @@ async function run() {
         method: 'tools/call',
         params: {
           name: tool.value,
-          arguments: needsId.value ? { id: shipmentId.value.trim().toUpperCase() } : {}
+          arguments: argsFor()
         }
       }
     })
@@ -63,6 +86,13 @@ async function run() {
         size="sm"
         placeholder="MP-3318-MC"
         class="sm:w-44 font-mono"
+      />
+      <UInput
+        v-if="needsReason"
+        v-model="reason"
+        size="sm"
+        placeholder="Damage claim open"
+        class="sm:w-52"
       />
       <UButton
         icon="i-lucide-play"
@@ -90,7 +120,12 @@ async function run() {
       <pre class="p-3 text-[11px] leading-relaxed text-zinc-700 whitespace-pre-wrap break-words max-h-80 overflow-y-auto bg-white">{{ output }}</pre>
     </div>
 
-    <p v-else class="text-xs text-zinc-400">
+    <p v-if="writes" class="flex items-center gap-1.5 text-[11px] text-amber-600">
+      <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+      This tool writes to the job book — it holds an ask / issues a voucher for real.
+    </p>
+
+    <p v-if="!output" class="text-xs text-zinc-400">
       Runs against <code class="font-mono">/mcp</code> with the demo key — the exact call an assistant makes.
     </p>
   </div>

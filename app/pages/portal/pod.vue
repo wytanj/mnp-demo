@@ -5,12 +5,28 @@ import { fmtWhen, sortPortalJobs, toPortalJobs, type PortalJob } from '~/utils/p
 definePageMeta({ layout: 'portal' })
 useHead({ title: 'POD / review — M&P client portal' })
 
-const { data: jobs } = await useFetch('/api/portal/shipments', {
+/**
+ * `PortalJob` deliberately does not carry the voucher code (it is not part of
+ * the customer-safe projection), so the reward is picked off the same feed
+ * here, keyed by job — nothing else about the shipment is kept.
+ */
+const { data: feed } = await useFetch('/api/portal/shipments', {
   key: 'portal-pod',
-  transform: (rows): PortalJob[] => sortPortalJobs(toPortalJobs((rows ?? []) as unknown as Shipment[]))
+  transform: (rows) => {
+    const list = (rows ?? []) as unknown as Shipment[]
+    return {
+      jobs: sortPortalJobs(toPortalJobs(list)),
+      rewards: Object.fromEntries(
+        list
+          .filter((s) => s.review?.reward)
+          .map((s) => [s.id, { code: s.review!.reward!.code, value: s.review!.reward!.value ?? 'Grab $10' }])
+      ) as Record<string, { code: string; value: string }>
+    }
+  }
 })
 
-const list = computed(() => jobs.value ?? [])
+const list = computed<PortalJob[]>(() => feed.value?.jobs ?? [])
+const rewards = computed(() => feed.value?.rewards ?? {})
 const awaiting = computed(() => list.value.filter((j) => j.status === 'out_for_delivery'))
 const delivered = computed(() =>
   list.value
@@ -58,7 +74,7 @@ const REVIEW_LABELS: Record<PortalJob['reviewState'], string> = {
         label="Reviews to leave"
         icon="i-lucide-star"
         :value="toReview.length"
-        :hint="reviewed.length ? `${reviewed.length} already sent — thank you` : 'We ask once, after delivery'"
+        :hint="reviewed.length ? `${reviewed.length} already sent — thank you` : 'We ask once, then one reminder'"
       />
     </div>
 
@@ -132,6 +148,12 @@ const REVIEW_LABELS: Record<PortalJob['reviewState'], string> = {
                 <span class="ms-1 text-xs font-semibold text-zinc-600">{{ j.rating }}/5</span>
               </div>
               <p v-if="j.reviewComment" class="mt-1 line-clamp-3 text-xs text-zinc-500">“{{ j.reviewComment }}”</p>
+              <p v-if="rewards[j.id]" class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                <UIcon name="i-lucide-gift" class="size-3.5 text-primary-500" />
+                <span class="text-zinc-500">Your voucher</span>
+                <span class="font-mono font-semibold text-zinc-800">{{ rewards[j.id]!.code }}</span>
+                <UBadge :label="rewards[j.id]!.value" color="success" variant="subtle" size="sm" />
+              </p>
             </div>
             <p v-else class="mt-1 text-sm font-semibold">{{ REVIEW_LABELS[j.reviewState] }}</p>
 

@@ -8,7 +8,8 @@ import {
   STATUS_LABELS,
   customsReady,
   declarationGaps,
-  docsDone
+  docsDone,
+  reviewAskDecision
 } from '#shared/utils/shipping'
 
 const API_KEY = process.env.MCP_API_KEY || 'mp-demo-2481'
@@ -96,7 +97,17 @@ function slim(s: Shipment) {
       : null,
     signedOff: s.signoff ? `by ${s.signoff.name} at ${fmtSgWhen(s.signoff.at)}` : null,
     review: s.review ? { rating: s.review.rating, comment: s.review.comment, helpedBy: s.review.helpedBy, rewardSent: !!s.review.reward } : null,
-    reviewAsk: s.reviewAsk ? { state: s.reviewAsk.state, trigger: s.reviewAsk.trigger, at: s.reviewAsk.at, reason: s.reviewAsk.reason } : null,
+    reviewAsk: s.reviewAsk
+      ? {
+          state: s.reviewAsk.state,
+          trigger: s.reviewAsk.trigger,
+          at: s.reviewAsk.at,
+          reason: s.reviewAsk.reason,
+          reminders: s.reviewAsk.reaskCount ?? 0,
+          lastReminderAt: s.reviewAsk.reaskAt,
+          nextReminderDue: s.reviewAsk.reaskDueAt
+        }
+      : null,
     timeline: s.events.map((e) => ({
       at: e.at,
       actor: e.actor,
@@ -191,6 +202,42 @@ const TOOLS = [
       },
       required: ['shipmentId', 'body']
     }
+  },
+  {
+    name: 'draft_review_ask',
+    description: "Preview the review-request email for a delivered shipment WITHOUT sending it: returns the exact subject and body the customer would get, plus the review programme's gate decision (an open claim always blocks the ask) and any reminder already sent. Use this before issuing a review ask.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        shipmentId: { type: 'string', description: 'Shipment id, e.g. MP-8102-AF' }
+      },
+      required: ['shipmentId']
+    }
+  },
+  {
+    name: 'hold_review_for_claim',
+    description: 'Hold (suppress) the review request on a shipment with a reason — damage, missing item, destination fee dispute, an unhappy phone call. The ask stays out of the programme until CS releases it. Nothing is emailed to the customer.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        shipmentId: { type: 'string', description: 'Shipment id, e.g. MP-8125-HF' },
+        reason: { type: 'string', description: 'Why the ask is held, e.g. "Damage claim open"' }
+      },
+      required: ['shipmentId', 'reason']
+    }
+  },
+  {
+    name: 'issue_reward',
+    description: 'Issue the thank-you voucher on a shipment that already has a review: generates an MP-THANKS- code if none is given, records it on the job and emails the customer the voucher. Fails if there is no review yet or a reward was already sent.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        shipmentId: { type: 'string', description: 'Shipment id, e.g. MP-8110-AF' },
+        code: { type: 'string', description: 'Optional voucher code — generated (MP-THANKS-…) when omitted' },
+        value: { type: 'string', description: 'Optional voucher value, defaults to "Grab $10"' }
+      },
+      required: ['shipmentId']
+    }
   }
 ]
 
@@ -241,9 +288,46 @@ async function callTool(name: string, args: any): Promise<string> {
         actions.push({ shipment: s.id, client: s.company ?? s.customerName, action: 'Customer sign-off pending — delivery in progress' })
       }
       if (s.review && !s.review.reward) {
-        actions.push({ shipment: s.id, client: s.company ?? s.customerName, action: `Approve review reward (★${s.review.rating} review received)` })
+        actions.push({
+          bucket: 'reviews',
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: `Approve review reward (★${s.review.rating} review received)`,
+          proof: s.review.platforms?.length ? s.review.platforms.join(' + ') : s.review.screenshot ? 'screenshot uploaded' : undefined
+        })
       }
-      if (s.customs && (s.customs.status === 'docs_pending' || s.customs.status === 'ready_for_declaration')) {
+      // Review programme: asks held by the claim gate, and asks still unanswered.
+      if (!s.review && s.reviewAsk?.state === 'held') {
+        actions.push({
+          bucket: 'reviews',
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: `Review ask HELD — ${s.reviewAsk.reason ?? 'held by CS'}. Release it on /ops/reviews once the reason is cleared.`,
+          heldSince: s.reviewAsk.at
+        })
+      }
+      if (!s.review && s.reviewAsk?.state === 'sent') {
+        const reminders = s.reviewAsk.reaskCount ?? 0
+        actions.push({
+          bucket: 'reviews',
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: reminders >= 2
+            ? 'Review ask unanswered after 2 reminders — we stop chasing'
+            : `Review ask unanswered — ${reminders} reminder(s) sent, a 48h reminder can still go out`,
+          askedAt: s.reviewAsk.at,
+          nextReminderDue: s.reviewAsk.reaskDueAt
+        })
+      }
+      if (!s.review && !s.reviewAsk && (s.status === 'delivered' || s.signoff)) {
+        actions.push({
+          bucket: 'reviews',
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: 'Delivered but no review ask has gone out — send one from /ops/reviews or preview it with draft_review_ask'
+        })
+      }
+      if (s.customs && (s.customs.status === 'docs_pending' || s.customs.status === 'ready_for_declaration' || s.customs.status === 'queried')) {
         actions.push({
           shipment: s.id,
           client: s.company ?? s.customerName,
@@ -467,6 +551,81 @@ async function callTool(name: string, args: any): Promise<string> {
     await dbSaveShipment(shipment)
 
     return `WhatsApp sent to ${thread.contactName} (${thread.contactHandle}) on ${shipment.id} and logged on the job timeline (simulated for this demo). Thread is now "waiting on them".\n\nSent: ${text}`
+  }
+
+  if (name === 'draft_review_ask' || name === 'hold_review_for_claim' || name === 'issue_reward') {
+    const shipment = shipments.find((x) => x.id === String(args?.shipmentId ?? '').toUpperCase())
+    if (!shipment) {
+      return `No shipment found with id "${args?.shipmentId}". Use list_shipments to see valid ids.`
+    }
+
+    if (name === 'draft_review_ask') {
+      const decision = reviewAskDecision(shipment)
+      const preview = buildReviewEmail(shipment)
+      return JSON.stringify({
+        shipment: shipment.id,
+        client: shipment.company ?? shipment.customerName,
+        delivered: deliveredAtOf(shipment) ?? null,
+        gate: decision.send
+          ? { canSend: true, rule: 'Delivered, no open claim, no ask outstanding — the ask may go out.' }
+          : { canSend: false, blockedBecause: decision.reason },
+        reviewAsk: shipment.reviewAsk
+          ? {
+              state: shipment.reviewAsk.state,
+              sentAt: shipment.reviewAsk.at,
+              reminders: shipment.reviewAsk.reaskCount ?? 0,
+              nextReminderDue: shipment.reviewAsk.reaskDueAt,
+              heldReason: shipment.reviewAsk.reason
+            }
+          : { state: 'not_yet' },
+        draft: { to: preview.to, subject: preview.subject, body: preview.body, cta: preview.ctaLabel, ctaUrl: preview.ctaUrl },
+        note: 'Draft only — nothing was sent. Ops send it from /ops/reviews ("Send ask now") or release a held ask there.'
+      }, null, 2)
+    }
+
+    if (name === 'hold_review_for_claim') {
+      const reason = String(args?.reason ?? '').trim()
+      if (!reason) return 'reason is required — say why the review ask is being held.'
+      if (shipment.review) return `${shipment.id} already has a ${shipment.review.rating}-star review — nothing to hold.`
+      const at = new Date().toISOString()
+      shipment.reviewAsk = {
+        ...(shipment.reviewAsk ?? {}),
+        state: 'held',
+        trigger: shipment.reviewAsk?.trigger ?? 'delivered',
+        at,
+        reason
+      }
+      addEvent(shipment, {
+        type: 'note',
+        actor: 'cs',
+        note: `⏸ Review request held via AI assistant — ${reason}`,
+        internal: true,
+        at
+      })
+      await dbSaveShipment(shipment)
+      return `Review request on ${shipment.id} is now held — "${reason}". It stays out of the review programme (visible in the Held lane on /ops/reviews) until CS releases it. Nothing was emailed to the customer.`
+    }
+
+    // issue_reward
+    if (!shipment.review) {
+      return `${shipment.id} has no review yet, so there is nothing to reward. Use draft_review_ask to see whether an ask can go out.`
+    }
+    if (shipment.review.reward) {
+      return `${shipment.id} already had voucher ${shipment.review.reward.code} (${shipment.review.reward.value ?? 'Grab $10'}) issued on ${shipment.review.reward.at}.`
+    }
+    const code = String(args?.code ?? '').trim() || thanksCode(shipment.id)
+    const value = String(args?.value ?? 'Grab $10').trim() || 'Grab $10'
+    shipment.review.reward = { code, at: new Date().toISOString(), value }
+    addEvent(shipment, {
+      type: 'note',
+      actor: 'cs',
+      note: `🎁 Review approved via AI assistant — ${value} voucher ${code} emailed to customer`
+    })
+    await dbSaveShipment(shipment)
+    const rewardMail = buildRewardEmail(shipment, code)
+    await sendEmail(rewardMail)
+    await dbSaveEmail(rewardMail)
+    return `Voucher ${code} (${value}) issued on ${shipment.id} for the ${shipment.review.rating}-star review, logged on the timeline and emailed to ${shipment.customerEmail}.`
   }
 
   return `Unknown tool: ${name}`

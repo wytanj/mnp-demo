@@ -1,12 +1,3 @@
-/** Readable, demo-friendly voucher code: MP-THANKS-9032AB. */
-function thanksCode(id: string): string {
-  // Job ids look like MP-9032-TA, so chars 3-6 are the job number.
-  const stem = id.slice(3, 7).replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'MPMP'
-  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-  const salt = letters[Math.floor(Math.random() * letters.length)]! + letters[Math.floor(Math.random() * letters.length)]!
-  return `MP-THANKS-${stem}${salt}`
-}
-
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const shipment = id ? await dbGetShipment(id) : undefined

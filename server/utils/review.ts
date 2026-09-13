@@ -39,3 +39,61 @@ export async function maybeSendReviewAsk(
 
   return shipment.reviewAsk
 }
+
+/** Max reminders after the first ask, and the gap between them. */
+export const REASK_MAX = 2
+export const REASK_WINDOW_MS = 48 * 60 * 60 * 1000
+
+/** Readable, demo-friendly voucher code: MP-THANKS-9032AB. */
+export function thanksCode(id: string): string {
+  // Job ids look like MP-9032-TA, so chars 3-6 are the job number.
+  const stem = id.slice(3, 7).replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'MPMP'
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const salt = letters[Math.floor(Math.random() * letters.length)]! + letters[Math.floor(Math.random() * letters.length)]!
+  return `MP-THANKS-${stem}${salt}`
+}
+
+/** When the delivery actually happened — sign-off first, else the delivered event. */
+export function deliveredAtOf(s: Shipment): string | undefined {
+  return s.signoff?.at ?? [...(s.events ?? [])].reverse().find((e) => e.status === 'delivered')?.at
+}
+
+/**
+ * The job is finished from the customer's point of view, so the review
+ * programme is allowed to have an opinion about it.
+ */
+export function isDeliveredJob(s: Shipment): boolean {
+  return s.status === 'delivered' || !!s.signoff
+}
+
+/**
+ * Send (or re-send) the review email for a re-ask. Mutates the shipment —
+ * the caller persists it. Returns the new reviewAsk.
+ */
+export async function sendReviewReask(shipment: Shipment): Promise<ReviewAsk> {
+  const at = new Date().toISOString()
+  const count = (shipment.reviewAsk?.reaskCount ?? 0) + 1
+  const dueAt = new Date(Date.now() + REASK_WINDOW_MS).toISOString()
+
+  const email = buildReviewEmail(shipment, at)
+  email.subject = `Reminder: how did we do on ${shipment.id}?`
+  await sendEmail(email)
+  await dbSaveEmail(email)
+
+  shipment.reviewAsk = {
+    ...(shipment.reviewAsk ?? { state: 'sent' }),
+    state: 'sent',
+    trigger: shipment.reviewAsk?.trigger ?? 'delivered',
+    at: shipment.reviewAsk?.at ?? at,
+    reaskAt: at,
+    reaskCount: count,
+    reaskDueAt: dueAt
+  }
+  addEvent(shipment, {
+    type: 'note',
+    actor: 'system',
+    note: `🔁 Review reminder sent (re-ask #${count}) — next in 48h`,
+    at
+  })
+  return shipment.reviewAsk
+}

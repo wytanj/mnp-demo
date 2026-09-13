@@ -1,60 +1,124 @@
 <script setup lang="ts">
-import type { ClaimType, Shipment } from '#shared/utils/shipping'
 import type { ReviewRow } from '~/components/ops/ReviewColumn.vue'
 
 /**
  * Review programme board. The ask fires on delivery and holds itself when a
- * claim is open — this page is where CS sees all three states at once and can
- * override either way.
+ * claim is open — this page is where CS sees all four states at once (never
+ * asked / asked / received / held) and can override any of them.
+ *
+ * One feed: `/api/reviews` carries the rows, the claim gate and the counts.
  */
 definePageMeta({ layout: 'ops' })
 useHead({ title: 'Reviews — M&P ops' })
 
 interface ReviewBoard {
+  notAsked: ReviewRow[]
   asked: ReviewRow[]
   received: ReviewRow[]
   suppressed: ReviewRow[]
+  counts: {
+    notAsked: number
+    asked: number
+    received: number
+    held: number
+    heldByClaim: number
+    reminded: number
+    issued: number
+    awaitingVerification: number
+    avgRating: number | null
+  }
 }
 
-const { data: board, refresh } = await useFetch<ReviewBoard>('/api/reviews', {
-  default: () => ({ asked: [], received: [], suppressed: [] })
-})
-const { data: shipments } = await useFetch<Shipment[]>('/api/shipments', { default: () => [] })
+const EMPTY: ReviewBoard = {
+  notAsked: [],
+  asked: [],
+  received: [],
+  suppressed: [],
+  counts: {
+    notAsked: 0, asked: 0, received: 0, held: 0, heldByClaim: 0,
+    reminded: 0, issued: 0, awaitingVerification: 0, avgRating: null
+  }
+}
+
+const { data: board, refresh } = await useFetch<ReviewBoard>('/api/reviews', { default: () => EMPTY })
 
 const toast = useToast()
 const busy = ref<string | null>(null)
 const tab = ref('asked')
 
-/** /api/reviews returns the hold reason but not the claim type — join it here. */
-const claims = computed<Record<string, ClaimType | undefined>>(() =>
-  Object.fromEntries((shipments.value ?? []).map((s) => [s.id, s.claim?.type]))
-)
-
-const avgRating = computed(() => {
-  const rated = (board.value?.received ?? []).filter((r) => typeof r.rating === 'number')
-  if (!rated.length) return '—'
-  return (rated.reduce((sum, r) => sum + (r.rating ?? 0), 0) / rated.length).toFixed(1)
-})
+const counts = computed(() => board.value?.counts ?? EMPTY.counts)
 
 const stats = computed(() => [
-  { key: 'asked', label: 'Asked', n: board.value?.asked.length ?? 0, icon: 'i-lucide-send', cls: 'text-sky-600' },
-  { key: 'received', label: 'Received', n: board.value?.received.length ?? 0, icon: 'i-lucide-star', cls: 'text-amber-500' },
-  { key: 'suppressed', label: 'Suppressed', n: board.value?.suppressed.length ?? 0, icon: 'i-lucide-pause-circle', cls: 'text-zinc-600' },
-  { key: 'avg', label: 'Average rating', n: avgRating.value, icon: 'i-lucide-trending-up', cls: 'text-emerald-600' }
+  { key: 'notAsked', label: 'Not asked yet', n: counts.value.notAsked, icon: 'i-lucide-inbox', cls: 'text-zinc-600' },
+  { key: 'asked', label: 'Asked', n: counts.value.asked, icon: 'i-lucide-send', cls: 'text-sky-600' },
+  { key: 'received', label: 'Received', n: counts.value.received, icon: 'i-lucide-star', cls: 'text-amber-500' },
+  { key: 'held', label: 'Held', n: counts.value.held, icon: 'i-lucide-pause-circle', cls: 'text-zinc-600' },
+  { key: 'avg', label: 'Average rating', n: counts.value.avgRating ?? '—', icon: 'i-lucide-trending-up', cls: 'text-emerald-600' }
 ])
 
 const TABS = computed(() => [
-  { value: 'asked', label: `Asked (${board.value?.asked.length ?? 0})` },
-  { value: 'received', label: `Received (${board.value?.received.length ?? 0})` },
-  { value: 'suppressed', label: `Suppressed (${board.value?.suppressed.length ?? 0})` }
+  { value: 'notAsked', label: `Not asked yet (${counts.value.notAsked})` },
+  { value: 'asked', label: `Asked (${counts.value.asked})` },
+  { value: 'received', label: `Received (${counts.value.received})` },
+  { value: 'held', label: `Held (${counts.value.held})` }
 ])
 
-function nudge(row: ReviewRow) {
-  toast.add({
-    title: 'Reminder queued (demo)',
-    description: `A second review ask goes to ${row.client} on ${row.id} in 48h.`,
-    color: 'info',
-    icon: 'i-lucide-bell-ring'
+/** Live line under the gate rule — what the rule is actually doing right now. */
+const gateLine = computed(() => {
+  const n = counts.value.heldByClaim
+  const reminded = counts.value.reminded
+  const bits = [
+    n === 0
+      ? 'No ask is held by a claim right now.'
+      : `${n} ask${n === 1 ? '' : 's'} currently held by an open claim.`
+  ]
+  if (reminded) bits.push(`${reminded} ask${reminded === 1 ? ' has' : 's have'} had a 48h reminder.`)
+  return bits.join(' ')
+})
+
+async function act(row: ReviewRow, body: Record<string, unknown>, ok: { title: string; description: string }) {
+  busy.value = row.id
+  try {
+    await $fetch(`/api/shipments/${row.id}/review-ask`, { method: 'POST', body })
+    await refresh()
+    toast.add({ ...ok, color: 'success', icon: 'i-lucide-star' })
+  } catch (e: any) {
+    toast.add({
+      title: 'Could not do that',
+      description: e?.data?.statusMessage ?? 'Try again',
+      color: 'error',
+      icon: 'i-lucide-circle-alert'
+    })
+  } finally {
+    busy.value = null
+  }
+}
+
+function send(row: ReviewRow) {
+  return act(row, { action: 'send' }, {
+    title: 'Review ask sent',
+    description: `${row.client} · ${row.id} — the email is in the outbox.`
+  })
+}
+
+function reask(row: ReviewRow) {
+  return act(row, { action: 'reask' }, {
+    title: 'Reminder sent',
+    description: `Re-ask #${(row.reaskCount ?? 0) + 1} to ${row.client} on ${row.id} — next one due in 48h.`
+  })
+}
+
+function suppress({ row, reason }: { row: ReviewRow; reason: string }) {
+  return act(row, { action: 'suppress', reason }, {
+    title: 'Ask held',
+    description: `${row.id} held — ${reason}. It stays out of the programme until CS releases it.`
+  })
+}
+
+function release(row: ReviewRow) {
+  return act(row, { action: 'release' }, {
+    title: 'Review ask released',
+    description: `Sent to ${row.client} · ${row.id}`
   })
 }
 
@@ -67,26 +131,19 @@ function hold(row: ReviewRow) {
   })
 }
 
-async function release(row: ReviewRow) {
-  busy.value = row.id
-  try {
-    await $fetch(`/api/shipments/${row.id}/review-ask`, { method: 'POST', body: { action: 'release' } })
-    await refresh()
-    toast.add({ title: 'Review ask released', description: `Sent to ${row.client} · ${row.id}`, color: 'success', icon: 'i-lucide-star' })
-  } catch (e: any) {
-    toast.add({ title: 'Could not release', description: e?.data?.statusMessage ?? 'Try again', color: 'error' })
-  } finally {
-    busy.value = null
-  }
-}
-
 async function reward({ row, code }: { row: ReviewRow; code: string }) {
-  if (!code) return
   busy.value = row.id
   try {
-    await $fetch(`/api/shipments/${row.id}/reward`, { method: 'POST', body: { code, value: 'Grab $10' } })
+    const body: Record<string, unknown> = { value: 'Grab $10' }
+    if (code) body.code = code
+    await $fetch(`/api/shipments/${row.id}/reward`, { method: 'POST', body })
     await refresh()
-    toast.add({ title: 'Reward approved', description: `${code} emailed to ${row.client}`, color: 'success', icon: 'i-lucide-gift' })
+    toast.add({
+      title: 'Reward approved',
+      description: `Voucher emailed to ${row.client} · ${row.id}`,
+      color: 'success',
+      icon: 'i-lucide-gift'
+    })
   } catch (e: any) {
     toast.add({ title: 'Could not approve reward', description: e?.data?.statusMessage ?? 'Try again', color: 'error' })
   } finally {
@@ -107,7 +164,7 @@ async function reward({ row, code }: { row: ReviewRow; code: string }) {
     </template>
 
     <template #body>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shrink-0">
         <UPageCard v-for="s in stats" :key="s.key" variant="subtle" :ui="{ container: 'p-3 sm:p-4 gap-1' }">
           <div class="flex items-center gap-2">
             <UIcon :name="s.icon" class="size-4" :class="s.cls" />
@@ -122,44 +179,48 @@ async function reward({ row, code }: { row: ReviewRow; code: string }) {
         color="primary"
         variant="subtle"
         icon="i-lucide-info"
-        title="Ask goes out on delivery; held automatically when a claim is open."
-        description="Nobody chases reviews by hand, and an unhappy customer never gets asked to rate us mid-complaint."
+        title="Gate rule — ask on delivery, hold while a claim is open, remind twice, then stop."
         :ui="{ title: 'text-sm', description: 'text-xs' }"
-      />
+      >
+        <template #description>
+          <span class="block">
+            Nobody chases reviews by hand, and an unhappy customer never gets asked to rate us mid-complaint.
+          </span>
+          <span class="mt-1 block font-medium text-primary-700">{{ gateLine }}</span>
+        </template>
+      </UAlert>
 
       <!-- phone: tabs -->
       <div class="lg:hidden">
-        <UTabs v-model="tab" :items="TABS" :content="false" color="primary" variant="pill" size="sm" class="mb-3" :ui="{ list: 'bg-zinc-100 w-full', trigger: 'flex-1' }" />
+        <UTabs
+          v-model="tab"
+          :items="TABS"
+          :content="false"
+          color="primary"
+          variant="pill"
+          size="sm"
+          class="mb-3"
+          :ui="{ list: 'bg-zinc-100 w-full', trigger: 'flex-1' }"
+        />
+        <OpsReviewColumn v-if="tab === 'notAsked'" kind="not_asked" :rows="board.notAsked" :busy="busy" @send="send" />
         <OpsReviewColumn
-          v-if="tab === 'asked'"
+          v-else-if="tab === 'asked'"
           kind="asked"
           :rows="board.asked"
           :busy="busy"
-          @nudge="nudge"
+          @reask="reask"
+          @suppress="suppress"
         />
-        <OpsReviewColumn
-          v-else-if="tab === 'received'"
-          kind="received"
-          :rows="board.received"
-          :busy="busy"
-          @reward="reward"
-        />
-        <OpsReviewColumn
-          v-else
-          kind="suppressed"
-          :rows="board.suppressed"
-          :claims="claims"
-          :busy="busy"
-          @release="release"
-          @hold="hold"
-        />
+        <OpsReviewColumn v-else-if="tab === 'received'" kind="received" :rows="board.received" :busy="busy" @reward="reward" />
+        <OpsReviewColumn v-else kind="held" :rows="board.suppressed" :busy="busy" @release="release" @hold="hold" />
       </div>
 
-      <!-- desktop: three lanes -->
-      <div class="hidden lg:grid grid-cols-3 gap-4 items-start">
-        <OpsReviewColumn kind="asked" :rows="board.asked" :busy="busy" @nudge="nudge" />
+      <!-- desktop: four lanes -->
+      <div class="hidden lg:grid lg:grid-cols-4 gap-4 items-start">
+        <OpsReviewColumn kind="not_asked" :rows="board.notAsked" :busy="busy" @send="send" />
+        <OpsReviewColumn kind="asked" :rows="board.asked" :busy="busy" @reask="reask" @suppress="suppress" />
         <OpsReviewColumn kind="received" :rows="board.received" :busy="busy" @reward="reward" />
-        <OpsReviewColumn kind="suppressed" :rows="board.suppressed" :claims="claims" :busy="busy" @release="release" @hold="hold" />
+        <OpsReviewColumn kind="held" :rows="board.suppressed" :busy="busy" @release="release" @hold="hold" />
       </div>
     </template>
   </UDashboardPanel>

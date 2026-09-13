@@ -44,7 +44,10 @@ const TOOL_DOCS: Array<{ name: string; what: string }> = [
   { name: 'list_partner_waits', what: 'Lines, CFS, brokers, agents and hauliers we are waiting on or blocked by.' },
   { name: 'list_exceptions', what: 'Stuck jobs, passed ETAs, customs gaps, open claims, unanswered threads.' },
   { name: 'send_email', what: 'Send a branded M&P email and log it on the job timeline.' },
-  { name: 'send_whatsapp', what: 'Append a simulated WhatsApp message to the job thread and timeline.' }
+  { name: 'send_whatsapp', what: 'Append a simulated WhatsApp message to the job thread and timeline.' },
+  { name: 'draft_review_ask', what: 'Preview the review email for a job and the gate decision — drafts only, sends nothing.' },
+  { name: 'hold_review_for_claim', what: 'Hold a review ask with a reason so an unhappy customer is never asked mid-complaint.' },
+  { name: 'issue_reward', what: 'Issue the Grab $10 thank-you voucher on a review and email the code to the customer.' }
 ]
 
 const PROMPTS = [
@@ -67,6 +70,14 @@ const PROMPTS = [
   {
     text: 'Draft a WhatsApp reply to Brendan on MP-3318-MC telling him what we still need, then send it.',
     tools: ['get_shipment', 'send_whatsapp']
+  },
+  {
+    text: 'Draft the review request for MP-8102-AF and tell me whether we are allowed to send it.',
+    tools: ['draft_review_ask']
+  },
+  {
+    text: 'MP-8125-HF has a damage claim — hold its review request, then issue the thank-you voucher on MP-8110-AF.',
+    tools: ['hold_review_for_claim', 'issue_reward']
   }
 ]
 
@@ -140,7 +151,7 @@ async function copy(text: string, what = 'Copied') {
           <USeparator class="my-4" />
 
           <h3 class="text-xs font-bold uppercase tracking-wide text-zinc-500 mb-2">
-            9 tools exposed
+            {{ TOOL_DOCS.length }} tools exposed
           </h3>
           <ul class="space-y-1.5">
             <li v-for="t in TOOL_DOCS" :key="t.name" class="flex gap-2 items-start">

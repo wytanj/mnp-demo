@@ -265,7 +265,7 @@ async function createShipment() {
             icon="i-lucide-search"
             placeholder="Search job, client or route"
             class="w-56 hidden sm:block"
-            :ui="{ base: 'ps-9! border-0!', trailing: 'pe-1' }"
+            :ui="{ trailing: 'pe-1' }"
           >
             <template v-if="search" #trailing>
               <UButton
@@ -312,7 +312,6 @@ async function createShipment() {
           icon="i-lucide-search"
           placeholder="Search job, client or route"
           class="sm:hidden w-full"
-          :ui="{ base: 'ps-9! border-0!' }"
         />
 
         <!-- jobs table -->

@@ -14,7 +14,7 @@ import {
 definePageMeta({ layout: 'portal' })
 useHead({ title: 'Track a shipment — M&P client portal' })
 
-const { data: jobs } = await useFetch('/api/shipments', {
+const { data: jobs } = await useFetch('/api/portal/shipments', {
   key: 'portal-track-chips',
   transform: (rows): PortalJob[] => sortPortalJobs(toPortalJobs((rows ?? []) as unknown as Shipment[]))
 })

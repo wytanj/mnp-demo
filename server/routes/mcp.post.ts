@@ -94,7 +94,7 @@ function slim(s: Shipment) {
           resolvedNote: s.claim.resolvedNote
         }
       : null,
-    signedOff: s.signoff ? `by ${s.signoff.name} at ${s.signoff.at}` : null,
+    signedOff: s.signoff ? `by ${s.signoff.name} at ${fmtSgWhen(s.signoff.at)}` : null,
     review: s.review ? { rating: s.review.rating, comment: s.review.comment, helpedBy: s.review.helpedBy, rewardSent: !!s.review.reward } : null,
     reviewAsk: s.reviewAsk ? { state: s.reviewAsk.state, trigger: s.reviewAsk.trigger, at: s.reviewAsk.at, reason: s.reviewAsk.reason } : null,
     timeline: s.events.map((e) => ({

@@ -5,7 +5,7 @@ import { fmtWhen, sortPortalJobs, toPortalJobs, type PortalJob } from '~/utils/p
 definePageMeta({ layout: 'portal' })
 useHead({ title: 'POD / review — M&P client portal' })
 
-const { data: jobs } = await useFetch('/api/shipments', {
+const { data: jobs } = await useFetch('/api/portal/shipments', {
   key: 'portal-pod',
   transform: (rows): PortalJob[] => sortPortalJobs(toPortalJobs((rows ?? []) as unknown as Shipment[]))
 })

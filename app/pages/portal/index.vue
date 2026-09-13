@@ -13,11 +13,12 @@ definePageMeta({ layout: 'portal' })
 useHead({ title: 'My shipments — M&P client portal' })
 
 /*
- * /api/shipments is the ops feed. The transform runs before Nuxt serialises the
- * payload, so only the customer-safe projection ever reaches the browser — no
- * WhatsApp threads, partner board, driver mobile or TradeNet key-in draft.
+ * /api/portal/shipments is already scoped to the signed-in client and stripped
+ * server-side (no WhatsApp threads, partner board, driver mobile, CS contacts
+ * or TradeNet key-in draft). `toPortalJobs()` narrows it once more before Nuxt
+ * serialises the payload, so only `PortalJob` fields reach the browser.
  */
-const { data: jobs, status } = await useFetch('/api/shipments', {
+const { data: jobs, status } = await useFetch('/api/portal/shipments', {
   key: 'portal-my-shipments',
   transform: (rows): PortalJob[] => sortPortalJobs(toPortalJobs((rows ?? []) as unknown as Shipment[]))
 })

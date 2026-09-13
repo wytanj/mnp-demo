@@ -147,7 +147,7 @@ onBeforeUnmount(() => clearInterval(timer))
             placeholder="Search people, jobs, messages…"
             size="sm"
             class="hidden md:block w-64"
-            :ui="{ base: 'ps-8!', trailing: 'pe-1' }"
+            :ui="{ trailing: 'pe-1' }"
           >
             <template v-if="search" #trailing>
               <UButton icon="i-lucide-x" color="neutral" variant="link" size="xs" @click="search = ''" />

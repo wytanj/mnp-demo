@@ -11,11 +11,13 @@ import {
 /**
  * Client portal — signed in as one hardcoded customer (no auth in the demo).
  *
- * `/api/shipments` is the OPS feed: it carries WhatsApp threads, the partner
- * board, driver mobiles, CS contacts and the TradeNet key-in draft. None of
- * that may reach the portal, so every page runs the feed through
- * `toPortalJob()` inside a `useFetch` transform — the payload that gets
- * serialised into the page is the customer-safe projection below, nothing else.
+ * Portal pages read `/api/portal/shipments` — the server-side feed that is
+ * already filtered to this client and stripped of the internal surfaces
+ * (`/api/shipments`, the OPS feed, carries WhatsApp threads, the partner board,
+ * driver mobiles, CS contacts and the TradeNet key-in draft). Every page still
+ * runs that feed through `toPortalJob()` inside a `useFetch` transform, so the
+ * payload serialised into the page is the customer-safe projection below,
+ * nothing else.
  */
 export const PORTAL_CLIENT = {
   name: 'Melissa Tan',

@@ -7,6 +7,7 @@ import {
   lastEventAt,
   PARTNER_ROLE_LABELS
 } from '#shared/utils/shipping'
+import { fmtAgo, fmtSgWhen } from './datetime'
 
 export type ExceptionKind =
   | 'stuck'
@@ -36,6 +37,12 @@ function clientOf(s: Shipment): string {
   return s.company ?? s.customerName
 }
 
+/** Make a free-text note safe to append a sentence to. */
+function sentence(text: string): string {
+  const t = text.trim()
+  return /[.!?…]$/.test(t) ? t : `${t}.`
+}
+
 function hoursAgo(iso: string): number {
   return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 3600_000))
 }
@@ -61,7 +68,7 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
         kind: 'stuck',
         severity: 'high',
         title: `No movement for ${hoursAgo(at)}h`,
-        detail: `${s.id} is still "${s.status.replace(/_/g, ' ')}" and the last timeline entry was ${hoursAgo(at)} hours ago.`,
+        detail: `${s.id} is still "${s.status.replace(/_/g, ' ')}" — the last timeline entry was ${fmtSgWhen(at)}, ${fmtAgo(at)}.`,
         since: at,
         link
       })
@@ -74,8 +81,8 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
         client,
         kind: 'eta_passed',
         severity: 'high',
-        title: `ETA passed ${hoursAgo(s.eta)}h ago`,
-        detail: `ETA was ${s.eta} and ${s.id} has not been delivered. Route: ${s.origin} → ${s.destination}.`,
+        title: `ETA passed ${fmtAgo(s.eta)}`,
+        detail: `ETA was ${fmtSgWhen(s.eta)}, ${fmtAgo(s.eta)}, and ${s.id} has not been delivered. Route: ${s.origin} → ${s.destination}.`,
         since: s.eta,
         link
       })
@@ -92,7 +99,7 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
           kind: 'customs_gap',
           severity: 'high',
           title: `${gaps.length} item${gaps.length === 1 ? '' : 's'} missing before TradeNet filing`,
-          detail: `Still needed: ${gaps.join(', ')}.`,
+          detail: `Still needed: ${gaps.join(', ')}. ETA ${fmtSgWhen(s.eta)}, ${fmtAgo(s.eta)}.`,
           since: lastEventAt(s),
           link: `/ops/customs/${s.id}`
         })
@@ -107,7 +114,7 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
         kind: 'claim_open',
         severity: 'medium',
         title: `${CLAIM_LABELS[s.claim.type]} open`,
-        detail: s.claim.note || `${CLAIM_LABELS[s.claim.type]} raised by ${s.claim.openedBy}.`,
+        detail: `${sentence(s.claim.note || `${CLAIM_LABELS[s.claim.type]} raised by ${s.claim.openedBy}`)} Opened ${fmtSgWhen(s.claim.openedAt)}, ${fmtAgo(s.claim.openedAt)}.`,
         since: s.claim.openedAt,
         link
       })
@@ -122,7 +129,7 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
         kind: 'partner_blocked',
         severity: 'high',
         title: `${PARTNER_ROLE_LABELS[p.role]} blocked — ${p.name}`,
-        detail: p.waitingFor ?? `${p.name} cannot proceed.`,
+        detail: `${sentence(p.waitingFor ?? `${p.name} cannot proceed`)}${p.since ? ` Blocked since ${fmtSgWhen(p.since)}, ${fmtAgo(p.since)}.` : ''}`,
         since: p.since ?? lastEventAt(s),
         link: '/ops/partners'
       })
@@ -136,7 +143,7 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
         kind: 'signoff_pending',
         severity: 'low',
         title: 'Sign-off pending',
-        detail: `${s.id} is out for delivery with no POD signature yet.`,
+        detail: `${s.id} is out for delivery with no POD signature yet. Last update ${fmtSgWhen(lastEventAt(s))}, ${fmtAgo(lastEventAt(s))}.`,
         since: lastEventAt(s),
         link
       })
@@ -153,8 +160,8 @@ export function buildExceptions(shipments: Shipment[], threads: CommsThread[]): 
       client: s ? clientOf(s) : t.contactName,
       kind: 'needs_reply',
       severity: 'medium',
-      title: `${t.channel === 'whatsapp' ? 'WhatsApp' : 'Email'} from ${t.contactName} unanswered ${hoursAgo(t.lastAt)}h`,
-      detail: t.messages[t.messages.length - 1]?.body ?? t.subject,
+      title: `${t.channel === 'whatsapp' ? 'WhatsApp' : 'Email'} from ${t.contactName} unanswered for ${fmtAgo(t.lastAt).replace(/ ago$/, '')}`,
+      detail: `"${t.messages[t.messages.length - 1]?.body ?? t.subject}" — sent ${fmtSgWhen(t.lastAt)}, ${fmtAgo(t.lastAt)}.`,
       since: t.lastAt,
       link: `/ops/inbox?thread=${encodeURIComponent(t.id)}`
     })

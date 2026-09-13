@@ -86,22 +86,24 @@ body {
   .layout.cols-2.even { grid-template-columns: 1.15fr 1fr; }
 }
 
-/* document checklist */
+/* document checklist — also rendered in the narrow ops side column, so every
+   row wraps instead of squeezing the label into a one-word column */
 .doc-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
 .doc-row:last-of-type { border-bottom: none; }
 .doc-row.due-soon { background: #fff7ed; margin: 0 -8px; padding: 12px 8px; border-radius: 8px; }
-.doc-main { flex: 1; min-width: 0; }
+.doc-main { flex: 1 1 190px; min-width: 0; }
 .doc-label { font-weight: 600; font-size: 14px; }
-.doc-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 12px; }
-.doc-meta .deadline { color: var(--amber); font-weight: 700; }
+.doc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 3px; font-size: 12px; }
+.doc-meta .deadline { color: var(--amber); font-weight: 700; white-space: nowrap; }
 .doc-meta .muted { font-size: 12px; }
-.doc-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.doc-actions { display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; margin-left: auto; }
 
 /* ---------- top bar ---------- */
 .topbar {
@@ -237,8 +239,14 @@ label.field {
   margin-bottom: 12px;
 }
 label.field span { display: block; margin-bottom: 4px; color: var(--ink); }
-input[type='text'], input[type='email'], input[type='number'],
-input[type='datetime-local'], input[type='search'], textarea, select {
+/* Legacy form controls only. Scoped to legacy markup (.page / .field / .form /
+   .card) so element+attribute selectors never out-specify Tailwind / Nuxt UI
+   utilities on the ops, portal and driver shells. */
+:where(.page, .field, .form, .card) :is(
+  input[type='text'], input[type='email'], input[type='number'],
+  input[type='datetime-local'], input[type='search'], input[type='tel'],
+  textarea, select
+) {
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--line);
@@ -248,7 +256,7 @@ input[type='datetime-local'], input[type='search'], textarea, select {
   background: #fff;
   color: var(--ink);
 }
-input:focus, textarea:focus, select:focus {
+:where(.page, .field, .form, .card) :is(input, textarea, select):focus {
   outline: 2px solid var(--blue);
   outline-offset: -1px;
 }
@@ -433,8 +441,11 @@ input:focus, textarea:focus, select:focus {
 
 /* mobile ergonomics: 16px inputs stop iOS focus-zoom; thumb-height buttons */
 @media (max-width: 640px) {
-  input[type='text'], input[type='email'], input[type='number'],
-  input[type='datetime-local'], input[type='tel'], textarea, select {
+  :where(.page, .field, .form, .card) :is(
+    input[type='text'], input[type='email'], input[type='number'],
+    input[type='datetime-local'], input[type='search'], input[type='tel'],
+    textarea, select
+  ) {
     font-size: 16px;
     padding: 12px 14px;
   }

@@ -36,7 +36,7 @@ permit against the job. Nothing is ever auto-submitted.
 | --- | --- | --- | --- |
 | `MP-3318-MC` | Mecha | B2B | HK LCL import, **customs docs 1/4** + half-filled declaration; Brendan's **WhatsApp needs a reply**; CFS and broker both waiting |
 | `MP-9032-TA` | Titan Associates | B2B | **Shenzhen LCL, stuck** — ETA passed, no movement 30h, packing list missing, **Pan-Asia CFS blocked** without the permit, Titan waiting on an NOA |
-| `MP-4471-AF` | Allmighty Foods | B2B | Ex-Bangkok container, **declared on TradeNet by Joreen (manual)**, Docs 4/6, customer asked a question from `/track` |
+| `MP-4471-AF` | Allmighty Foods | B2B | Ex-Busan container, **declared on TradeNet by Joreen (manual)**, Docs 4/6, customer asked a question from `/track` |
 | `MP-7302-AF` | Allmighty Foods | B2C | Out for delivery — **live sign-off** in the demo, then the review request sends itself |
 | `MP-7710-AF` | Allmighty Foods | B2C | Delivered today, **review asked**, and Priya's **WhatsApp still needs a reply** |
 | `MP-8125-HF` | Hey Fran | B2SELF | Delivered & signed off, **open damage claim** → review request **held** |

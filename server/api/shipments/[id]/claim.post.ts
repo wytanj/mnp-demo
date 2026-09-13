@@ -63,6 +63,16 @@ export default defineEventHandler(async (event) => {
     // Claim resolved → ask now, if the job is delivered and still unreviewed.
     if (shipment.status === 'delivered' && !shipment.review) {
       await maybeSendReviewAsk(shipment, shipment.reviewAsk?.trigger ?? 'delivered')
+      // A hold survives the claim — CS still has to release it themselves.
+      if (shipment.reviewAsk?.state === 'held') {
+        addEvent(shipment, {
+          type: 'note',
+          actor: 'system',
+          note: '⏸ Claim resolved — review request still held, release it on the Reviews board',
+          internal: true,
+          at
+        })
+      }
     }
 
     await dbSaveShipment(shipment)

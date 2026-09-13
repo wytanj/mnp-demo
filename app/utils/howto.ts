@@ -189,7 +189,7 @@ export const HOWTO: Record<HowToKey, HowTo> = {
     click: [
       'Read the Programme rules card out loud: ask on delivery, hold on claim, 48h reminder ×2, 5★ → instant Grab $10.',
       'Reward codes issued — MP-8101-AF and MP-8112-HF got their voucher the second the 5★ landed, no CS step.',
-      'Awaiting verification — the Google/Facebook screenshot CS still has to check before a code goes out.',
+      'Pending claim of reward — the Google/Facebook proof CS still has to verify before the Grab $10 goes out.',
       'Programme outbox — the actual review asks and voucher emails, then follow the link into the ops Inbox.'
     ],
     say: [

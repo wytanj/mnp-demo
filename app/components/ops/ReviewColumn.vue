@@ -5,6 +5,10 @@ export interface ReviewRow {
   id: string
   client: string
   contact: string
+  title?: string
+  description?: string
+  customerName?: string
+  customerEmail?: string
   deliveredAt?: string
   askAt?: string
   state: string

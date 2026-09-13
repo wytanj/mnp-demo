@@ -6,7 +6,9 @@ import { reviewAskDecision } from '#shared/utils/shipping'
  *
  * Sends the review email when the job is clean; holds it (with a CS-only note
  * on the timeline) when there is an open claim, a review already given, or an
- * ask already out. Mutates the shipment — the caller persists it.
+ * ask already out. A held ask stays held until CS releases it on the Reviews
+ * board — nothing automatic lets it out. Mutates the shipment — the caller
+ * persists it.
  */
 export async function maybeSendReviewAsk(
   shipment: Shipment,
@@ -14,6 +16,12 @@ export async function maybeSendReviewAsk(
 ): Promise<ReviewAsk> {
   // Never downgrade an ask that already went out.
   if (shipment.reviewAsk?.state === 'sent' || shipment.reviewAsk?.state === 'answered') {
+    return shipment.reviewAsk
+  }
+
+  // CS parked it — only a release on the Reviews board lets it out, so leave the
+  // hold (and its reason) exactly as it is, with no second note on the timeline.
+  if (shipment.reviewAsk?.state === 'held') {
     return shipment.reviewAsk
   }
 

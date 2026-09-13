@@ -58,17 +58,47 @@ const counts = computed(() => board.value?.counts ?? EMPTY.counts)
 /** Codes actually issued — auto for 5★, manual after CS verifies a screenshot. */
 const issued = computed(() => received.value.filter((r) => r.reward))
 
-/** Proof is in but no voucher yet — CS approves it on the Reviews board. */
+/** Proof is in but no voucher yet — the customer is waiting on their Grab $10. */
 const awaiting = computed(() =>
   received.value.filter((r) => !r.reward && (r.screenshot || (r.platforms?.length ?? 0) > 0))
 )
 
-const stats = computed(() => [
+const stats = computed<Array<{ key: string; label: string; n: number; icon: string; cls: string; sub?: string | null }>>(() => [
   { key: 'asked', label: 'Pending asks', n: asked.value.length, icon: 'i-lucide-send', cls: 'text-sky-600' },
   { key: 'held', label: 'Held', n: suppressed.value.length, icon: 'i-lucide-pause-circle', cls: 'text-zinc-600' },
-  { key: 'received', label: 'Received', n: received.value.length, icon: 'i-lucide-star', cls: 'text-amber-500' },
+  {
+    key: 'received',
+    label: 'Reviews received',
+    n: received.value.length,
+    icon: 'i-lucide-star',
+    cls: 'text-amber-500',
+    sub: counts.value.avgRating ? `avg ${counts.value.avgRating}★` : null
+  },
   { key: 'issued', label: 'Vouchers issued', n: issued.value.length, icon: 'i-lucide-gift', cls: 'text-emerald-600' }
 ])
+
+/** Job id → client name, so the outbox can name who an email went to. */
+const clientById = computed(() => {
+  const m: Record<string, string> = {}
+  for (const lane of [board.value?.notAsked, board.value?.asked, board.value?.received, board.value?.suppressed])
+    for (const r of lane ?? []) m[r.id] = r.client
+  return m
+})
+
+/** Pending asks / Held read either as one row per job or folded under the client. */
+const groupBy = ref<'job' | 'client'>('job')
+
+const askedByClient = computed(() => {
+  const g: Record<string, ReviewRow[]> = {}
+  for (const r of asked.value) (g[r.title ?? r.client] ??= []).push(r)
+  return Object.entries(g).sort((a, b) => a[0].localeCompare(b[0]))
+})
+
+const suppressedByClient = computed(() => {
+  const g: Record<string, ReviewRow[]> = {}
+  for (const r of suppressed.value) (g[r.title ?? r.client] ??= []).push(r)
+  return Object.entries(g).sort((a, b) => a[0].localeCompare(b[0]))
+})
 
 const RULES = [
   { icon: 'i-lucide-package-check', text: 'Ask goes out on delivery — the moment the customer signs off.' },
@@ -114,6 +144,7 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
             <span class="text-xs font-medium text-zinc-500">{{ s.label }}</span>
           </div>
           <div class="text-2xl font-bold tabular-nums" :class="s.cls">{{ s.n }}</div>
+          <div v-if="s.sub" class="text-[11px] text-zinc-400">{{ s.sub }}</div>
         </UPageCard>
       </div>
 
@@ -182,7 +213,10 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
                 <td class="px-3 py-2.5">
                   <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
                 </td>
-                <td class="px-3 py-2.5 text-zinc-700">{{ r.client }}</td>
+                <td class="px-3 py-2.5 text-zinc-700">
+                  {{ r.client }}
+                  <span v-if="r.customerName && r.customerName !== r.client" class="block text-xs text-zinc-500">{{ r.customerName }}</span>
+                </td>
                 <td class="px-3 py-2.5 text-amber-500 whitespace-nowrap">{{ stars(r.rating) }}</td>
                 <td class="px-3 py-2.5 text-zinc-500 whitespace-nowrap text-xs">{{ when(r.reward!.at) }}</td>
                 <td class="px-3 py-2.5 whitespace-nowrap">
@@ -197,50 +231,18 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
         </div>
       </UCard>
 
-      <!-- Pending claim of reward -->
+      <!-- Pending claim of reward — proof is in, the Grab $10 is not out yet -->
       <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5' }">
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-hourglass" class="size-4 text-primary-600" />
             <h2 class="text-sm font-semibold text-zinc-900">Pending claim of reward</h2>
-            <UBadge v-if="issued.length" :label="String(issued.length)" color="primary" variant="subtle" size="sm" />
-          </div>
-        </template>
-
-        <p v-if="!issued.length" class="text-sm text-zinc-500">
-          Nothing out yet — issued codes sit here until the customer redeems them.
-        </p>
-
-        <ul v-else class="space-y-2">
-          <li
-            v-for="r in issued"
-            :key="r.id"
-            class="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2.5"
-          >
-            <span class="font-mono text-xs font-semibold text-zinc-900">{{ r.reward!.code }}</span>
-            <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
-            <span class="text-sm text-zinc-700 truncate">{{ r.client }}</span>
-            <UBadge label="Voucher email sent" color="info" variant="subtle" size="sm" icon="i-lucide-mail-check" />
-            <span class="ms-auto text-xs text-zinc-400">issued {{ when(r.reward!.at) }}</span>
-          </li>
-        </ul>
-        <p class="mt-3 text-[11px] text-zinc-400">
-          Demo — redemption happens at Grab, so a code stays here until the customer tells us they used it.
-        </p>
-      </UCard>
-
-      <!-- Awaiting verification -->
-      <UCard :ui="{ header: 'p-4 sm:px-5', body: 'p-4 sm:p-5' }">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-shield-check" class="size-4 text-amber-600" />
-            <h2 class="text-sm font-semibold text-zinc-900">Awaiting verification</h2>
             <UBadge v-if="awaiting.length" :label="String(awaiting.length)" color="warning" variant="subtle" size="sm" />
           </div>
         </template>
 
         <p v-if="!awaiting.length" class="text-sm text-zinc-500">
-          Nothing waiting — every public-review proof has been checked.
+          Nothing pending — every public-review proof has been verified and paid.
         </p>
 
         <ul v-else class="space-y-2">
@@ -250,7 +252,11 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
             class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5"
           >
             <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
-            <span class="text-sm text-zinc-700">{{ r.client }}</span>
+            <span class="text-sm text-zinc-700">{{ r.title ?? r.client }}</span>
+            <span
+              v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
+              class="text-xs text-zinc-400 truncate"
+            >{{ r.customerName }}</span>
             <span class="text-amber-500 text-sm">{{ stars(r.rating) }}</span>
             <span class="flex items-center gap-1.5">
               <UBadge
@@ -274,6 +280,9 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
             />
           </li>
         </ul>
+        <p class="mt-3 text-[11px] text-zinc-400">
+          Customer sent proof of a public review and is waiting on the Grab $10 — CS verifies the screenshot on the Reviews board.
+        </p>
       </UCard>
 
       <!-- Outbox strip -->
@@ -308,7 +317,7 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
               {{ e.shipmentId }}
             </NuxtLink>
             <span class="min-w-0 flex-1 truncate text-sm text-zinc-800">{{ e.subject }}</span>
-            <span class="text-xs text-zinc-500 truncate">{{ to(e.to) }}</span>
+            <span class="text-xs text-zinc-500 truncate">{{ clientById[e.shipmentId] ? clientById[e.shipmentId] + ' · ' : '' }}{{ to(e.to) }}</span>
             <span class="text-xs text-zinc-400 whitespace-nowrap">{{ when(e.at) }}</span>
           </li>
         </ul>
@@ -326,16 +335,53 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
               <UIcon name="i-lucide-send" class="size-4 text-sky-600" />
               <h2 class="text-sm font-semibold text-zinc-900">Pending asks</h2>
               <UBadge v-if="asked.length" :label="String(asked.length)" color="neutral" variant="subtle" size="sm" />
+              <!-- Shared with the Held card — one job per line, or folded under the client. -->
+              <div class="ms-auto flex items-center gap-1">
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  :variant="groupBy === 'job' ? 'solid' : 'ghost'"
+                  label="By job"
+                  @click="groupBy = 'job'"
+                />
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  :variant="groupBy === 'client' ? 'solid' : 'ghost'"
+                  label="By client"
+                  @click="groupBy = 'client'"
+                />
+              </div>
             </div>
           </template>
 
           <p v-if="!asked.length" class="text-sm text-zinc-500">No review asks are waiting on a reply.</p>
-          <ul v-else class="space-y-2">
+          <ul v-else-if="groupBy === 'job'" class="space-y-2">
             <li v-for="r in asked" :key="r.id" class="flex flex-wrap items-baseline gap-2 text-sm">
               <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
-              <span class="text-zinc-700 truncate">{{ r.client }}</span>
+              <span class="text-zinc-700 truncate">{{ r.title ?? r.client }}</span>
+              <span
+                v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
+                class="text-xs text-zinc-400 truncate"
+              >{{ r.customerName }}</span>
               <UBadge v-if="r.reaskCount" :label="`Reminded ×${r.reaskCount}`" color="info" variant="subtle" size="sm" />
               <span class="ms-auto shrink-0 text-xs text-zinc-500">asked {{ when(r.askAt) }}</span>
+            </li>
+          </ul>
+          <ul v-else class="space-y-3">
+            <li v-for="[client, rows] in askedByClient" :key="client">
+              <p class="text-xs font-semibold text-zinc-700">{{ client }}</p>
+              <ul class="mt-1 space-y-2">
+                <li v-for="r in rows" :key="r.id" class="flex flex-wrap items-baseline gap-2 text-sm">
+                  <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
+                  <span
+                    v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
+                    class="text-xs text-zinc-400 truncate"
+                  >{{ r.customerName }}</span>
+                  <UBadge v-if="r.reaskCount" :label="`Reminded ×${r.reaskCount}`" color="info" variant="subtle" size="sm" />
+                  <span class="ms-auto shrink-0 text-xs text-zinc-500">asked {{ when(r.askAt) }}</span>
+                </li>
+              </ul>
             </li>
           </ul>
 
@@ -353,16 +399,39 @@ const KIND_LABEL: Record<string, string> = { review: 'Review ask', reward: 'Vouc
             </div>
           </template>
 
-          <p v-if="!suppressed.length" class="text-sm text-zinc-500">Nothing held — no open claims blocking an ask.</p>
-          <ul v-else class="space-y-2.5">
+          <p v-if="!suppressed.length" class="text-sm text-zinc-500">Nothing held — no open claims or CS holds blocking an ask.</p>
+          <ul v-else-if="groupBy === 'job'" class="space-y-2.5">
             <li v-for="r in suppressed" :key="r.id" class="text-sm">
               <div class="flex flex-wrap items-baseline gap-2">
                 <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
-                <span class="text-zinc-700 truncate">{{ r.client }}</span>
+                <span class="text-zinc-700 truncate">{{ r.title ?? r.client }}</span>
+                <span
+                  v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
+                  class="text-xs text-zinc-400 truncate"
+                >{{ r.customerName }}</span>
                 <UBadge v-if="r.claimLabel" :label="r.claimLabel" color="error" variant="subtle" size="sm" />
                 <span class="ms-auto shrink-0 text-xs text-zinc-500">{{ when(r.deliveredAt) }}</span>
               </div>
-              <p v-if="r.reason" class="text-xs text-zinc-500 mt-0.5">{{ r.reason }}</p>
+              <p class="text-xs text-zinc-500 mt-0.5">{{ r.reason ?? r.gate ?? 'Held by CS' }}</p>
+            </li>
+          </ul>
+          <ul v-else class="space-y-3">
+            <li v-for="[client, rows] in suppressedByClient" :key="client">
+              <p class="text-xs font-semibold text-zinc-700">{{ client }}</p>
+              <ul class="mt-1 space-y-2.5">
+                <li v-for="r in rows" :key="r.id" class="text-sm">
+                  <div class="flex flex-wrap items-baseline gap-2">
+                    <NuxtLink :to="`/ops/jobs/${r.id}`" class="font-mono text-xs font-semibold text-primary-600 hover:underline">{{ r.id }}</NuxtLink>
+                    <span
+                      v-if="r.customerName && r.customerName !== (r.title ?? r.client)"
+                      class="text-xs text-zinc-400 truncate"
+                    >{{ r.customerName }}</span>
+                    <UBadge v-if="r.claimLabel" :label="r.claimLabel" color="error" variant="subtle" size="sm" />
+                    <span class="ms-auto shrink-0 text-xs text-zinc-500">{{ when(r.deliveredAt) }}</span>
+                  </div>
+                  <p class="text-xs text-zinc-500 mt-0.5">{{ r.reason ?? r.gate ?? 'Held by CS' }}</p>
+                </li>
+              </ul>
             </li>
           </ul>
 

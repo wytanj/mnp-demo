@@ -557,6 +557,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     status: 'out_for_delivery',
     customerName: 'Daniel Wong',
     customerEmail: 'daniel.wong@gmail.com',
+    company: 'Allmighty Foods Pte Ltd',
     origin: 'Allmighty Foods warehouse, Senoko Food Hub',
     destination: 'Blk 512 Bedok North Ave 2, #07-134',
     eta: new Date(Date.now() + 45 * 60_000).toISOString(),
@@ -975,6 +976,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     status: 'delivered',
     customerName: 'Priya Nair',
     customerEmail: 'priya.nair@example.sg',
+    company: 'Allmighty Foods Pte Ltd',
     origin: 'Allmighty Foods warehouse, Senoko Food Hub',
     destination: 'Blk 88 Tampines St 81, #11-203',
     eta: minsAgo(60 * 5),
@@ -1179,6 +1181,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     status: 'delivered',
     customerName: 'Priya Nair',
     customerEmail: 'priya.nair@example.sg',
+    company: 'Allmighty Foods Pte Ltd',
     origin: 'Allmighty Foods warehouse, Senoko Food Hub',
     destination: 'Blk 88 Tampines St 81, #11-203',
     eta: minsAgo(60 * 3),
@@ -1204,7 +1207,8 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       }
     ],
     createdAt: minsAgo(60 * 11),
-    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 3) }
+    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 3) },
+    reviewAsk: { state: 'sent', trigger: 'delivered', at: minsAgo(60 * 2) }
   }
   addEvent(s12, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 11) })
   addEvent(s12, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 11) })
@@ -1214,6 +1218,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s12, { type: 'note', actor: 'driver', note: 'Nobody home — customer asked for after 7pm, moved to last stop', at: minsAgo(335) })
   addEvent(s12, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Priya Nair', at: minsAgo(60 * 3) })
   addEvent(s12, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 3) })
+  addEvent(s12, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 2) })
 
   // Scenario 13 — delivered but disputed: Jewel charged an after-hours bay fee that
   // Hey Fran says was never quoted. Open claim → review ask held.

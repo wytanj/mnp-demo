@@ -4,6 +4,11 @@ import { CLAIM_LABELS, reviewAskDecision } from '#shared/utils/shipping'
 export interface ReviewRow {
   id: string
   client: string
+  /** Same as `client` — the card heading, kept separate so the UI can restyle it. */
+  title: string
+  description: string
+  customerName: string
+  customerEmail: string
   contact: string
   deliveredAt?: string
   askAt?: string
@@ -29,9 +34,15 @@ export interface ReviewRow {
 
 function row(s: Shipment): ReviewRow {
   const decision = reviewAskDecision(s)
+  // B2C jobs carry the shipper as company — fall back to the person we delivered to.
+  const client = (s.company ?? '').trim() || s.customerName
   return {
     id: s.id,
-    client: s.company ?? s.customerName,
+    client,
+    title: client,
+    description: s.description ?? '',
+    customerName: s.customerName,
+    customerEmail: s.customerEmail,
     contact: `${s.customerName} <${s.customerEmail}>`,
     deliveredAt: deliveredAtOf(s),
     askAt: s.reviewAsk?.at,

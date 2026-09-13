@@ -350,7 +350,8 @@ export type ReviewAskDecision = { send: true } | { send: false; reason: string }
 
 /**
  * Should we ask for a review right now? An open claim always wins — that goes
- * to CS/claims, not to a "how did we do?" email.
+ * to CS/claims, not to a "how did we do?" email. A held ask stays held too:
+ * once CS parks it, only a release on the Reviews board lets it out.
  */
 export function reviewAskDecision(
   s: Shipment,
@@ -363,6 +364,14 @@ export function reviewAskDecision(
     }
   }
   if (s.review) return { send: false, reason: 'Customer has already left a review' }
+  if (s.reviewAsk?.state === 'held') {
+    return {
+      send: false,
+      reason: s.reviewAsk.reason
+        ? `Held — ${s.reviewAsk.reason}`
+        : 'Held by CS — release it on the Reviews board'
+    }
+  }
   if (s.reviewAsk?.state === 'sent') return { send: false, reason: 'Review request already sent' }
   if (s.reviewAsk?.state === 'answered') return { send: false, reason: 'Review request already answered' }
   return { send: true }

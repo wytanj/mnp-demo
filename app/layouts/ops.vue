@@ -41,7 +41,7 @@ const items = computed<NavigationMenuItem[][]>(() => [
     { label: 'Customs queue', icon: 'i-lucide-stamp', to: '/ops/customs', badge: badge('customsQueue') },
     { label: 'Reviews', icon: 'i-lucide-star', to: '/ops/reviews', badge: badge('reviewsPending') },
     { label: 'Quotes', icon: 'i-lucide-file-text', to: '/ops/quotes', badge: badge('quotesNew') },
-    { label: 'Partners', icon: 'i-lucide-handshake', to: '/ops/partners', badge: badge('partnerWaits') },
+    { label: 'Trade partners', icon: 'i-lucide-handshake', to: '/ops/partners', badge: badge('partnerWaits') },
     { label: 'Exceptions', icon: 'i-lucide-triangle-alert', to: '/ops/exceptions', badge: badge('exceptions', 'error') },
     { label: 'Agent desk', icon: 'i-lucide-bot', to: '/ops/agent' }
   ],

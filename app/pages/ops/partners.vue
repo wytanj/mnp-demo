@@ -13,7 +13,7 @@ import {
  * haulier. "By job" is the CS view, "By partner" is the chasing view.
  */
 definePageMeta({ layout: 'ops' })
-useHead({ title: 'Partners — M&P ops' })
+useHead({ title: 'Trade partners — M&P ops' })
 
 interface PartnerRow {
   shipmentId: string
@@ -28,10 +28,19 @@ const { data: rows, refresh } = await useFetch<PartnerRow[]>('/api/partners', { 
 const toast = useToast()
 const now = useState<number>('ops-now', () => Date.now())
 
-const view = ref('job')
+const view = ref<'job' | 'partner'>('job')
+const tab = computed({
+  get: () => view.value,
+  set: (v: unknown) => {
+    const raw = (typeof v === 'object' && v && 'value' in (v as object)
+      ? String((v as { value: string }).value)
+      : String(v)) as 'job' | 'partner'
+    view.value = raw === 'partner' ? 'partner' : 'job'
+  }
+})
 const VIEWS = [
   { value: 'job', label: 'By job', icon: 'i-lucide-boxes' },
-  { value: 'partner', label: 'By partner', icon: 'i-lucide-handshake' }
+  { value: 'partner', label: 'By role', icon: 'i-lucide-handshake' }
 ]
 
 const ROLES: PartnerRole[] = ['shipping_line', 'warehouse', 'broker', 'agent', 'haulier']
@@ -158,7 +167,7 @@ const stateItems = STATES.map((s) => ({ value: s, label: PARTNER_STATE_LABELS[s]
       <UDashboardNavbar title="Partners" icon="i-lucide-handshake">
         <template #right>
           <UTabs
-            v-model="view"
+            v-model="tab"
             :items="VIEWS"
             :content="false"
             color="primary"

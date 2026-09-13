@@ -1,0 +1,17 @@
+{
+  "name": "freightflow-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview"
+  },
+  "dependencies": {
+    "nuxt": "^4.1.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "postgres": "^3.4.9"
+  }
+}

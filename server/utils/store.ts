@@ -1,0 +1,831 @@
+import type { OutboxEmail, Quote, Shipment, ShipmentEvent, ShipmentStatus } from '#shared/utils/shipping'
+import { STATUS_LABELS } from '#shared/utils/shipping'
+
+export function newId(prefix = 'MP'): string {
+  const digits = Math.floor(1000 + Math.random() * 9000)
+  const letters = Array.from({ length: 2 }, () =>
+    String.fromCharCode(65 + Math.floor(Math.random() * 26))
+  ).join('')
+  return `${prefix}-${digits}-${letters}`
+}
+
+export function addEvent(shipment: Shipment, event: Omit<ShipmentEvent, 'id' | 'at'> & { at?: string }): ShipmentEvent {
+  const full: ShipmentEvent = {
+    id: crypto.randomUUID(),
+    at: event.at ?? new Date().toISOString(),
+    ...event
+  }
+  shipment.events.push(full)
+  if (event.type === 'status' && event.status) {
+    shipment.status = event.status
+  }
+  return full
+}
+
+const MAIL_FROM = 'M&P International Freights <tracking@pickletour.app>'
+
+export function buildTrackingEmail(shipment: Shipment, at?: string): OutboxEmail {
+  return {
+    id: crypto.randomUUID(),
+    shipmentId: shipment.id,
+    to: shipment.customerEmail,
+    from: MAIL_FROM,
+    direction: 'out',
+    kind: 'tracking',
+    subject: `Your shipment ${shipment.id} is booked — track it live`,
+    body: [
+      `Hi ${shipment.customerName},`,
+      ``,
+      `Your shipment ${shipment.origin} → ${shipment.destination} is confirmed.`,
+      `${shipment.description} · ${shipment.pieces} pcs · ETA ${new Date(shipment.eta).toLocaleString()}`,
+      shipment.poNumber ? `Ref: ${shipment.poNumber}` : ``,
+      ``,
+      `— M&P International Freights · Moving you forward`
+    ].filter(Boolean).join('\n'),
+    ctaLabel: 'Track your shipment',
+    ctaUrl: `/track/${shipment.id}`,
+    at: at ?? new Date().toISOString()
+  }
+}
+
+export function buildReviewEmail(shipment: Shipment, at?: string): OutboxEmail {
+  return {
+    id: crypto.randomUUID(),
+    shipmentId: shipment.id,
+    to: shipment.customerEmail,
+    from: MAIL_FROM,
+    direction: 'out',
+    kind: 'review',
+    subject: `Delivered! How did we do on ${shipment.id}?`,
+    body: [
+      `Hi ${shipment.customerName},`,
+      ``,
+      `Shipment ${shipment.id} was delivered${shipment.signoff ? ` and signed for by ${shipment.signoff.name}` : ''}.`,
+      `How did we do? It takes 20 seconds.`,
+      `Left us a public Google or Facebook review? Upload a screenshot on the form to claim a Grab $10 voucher.`,
+      ``,
+      `— M&P International Freights · Moving you forward`
+    ].join('\n'),
+    ctaLabel: 'Leave a quick review',
+    ctaUrl: `/review/${shipment.id}`,
+    at: at ?? new Date().toISOString()
+  }
+}
+
+export function buildRewardEmail(shipment: Shipment, code: string, at?: string): OutboxEmail {
+  const value = shipment.review?.reward?.value ?? 'Grab $10'
+  return {
+    id: crypto.randomUUID(),
+    shipmentId: shipment.id,
+    to: shipment.customerEmail,
+    from: MAIL_FROM,
+    direction: 'out',
+    kind: 'reward',
+    subject: `Your review reward from M&P 🎁`,
+    body: [
+      `Hi ${shipment.customerName},`,
+      ``,
+      `Thanks for reviewing us! Your ${value} voucher code: ${code}`,
+      `Redeem it in the Grab app. Quote it with your M&P consultant if you need a hand.`,
+      ``,
+      `— M&P International Freights · Moving you forward`
+    ].join('\n'),
+    ctaLabel: 'Book your next shipment',
+    ctaUrl: `/`,
+    at: at ?? new Date().toISOString()
+  }
+}
+
+export function buildInboundEmail(opts: {
+  id?: string
+  shipment: Shipment
+  from: string
+  fromName?: string
+  subject: string
+  body: string
+  at: string
+  matchedBy?: OutboxEmail['matchedBy']
+}): OutboxEmail {
+  return {
+    id: opts.id ?? crypto.randomUUID(),
+    shipmentId: opts.shipment.id,
+    from: opts.from,
+    to: 'cs@mp.com.sg',
+    direction: 'in',
+    kind: 'inbound',
+    matchedBy: opts.matchedBy,
+    subject: opts.subject,
+    body: opts.body,
+    ctaLabel: 'Open shipment',
+    ctaUrl: `/track/${opts.shipment.id}`,
+    at: opts.at,
+    delivery: { state: 'simulated', to: 'cs@mp.com.sg', detail: 'inbound' }
+  }
+}
+
+export function buildCsReplyEmail(opts: {
+  id?: string
+  shipment: Shipment
+  to: string
+  subject: string
+  body: string
+  at: string
+}): OutboxEmail {
+  return {
+    id: opts.id ?? crypto.randomUUID(),
+    shipmentId: opts.shipment.id,
+    from: MAIL_FROM,
+    to: opts.to,
+    direction: 'out',
+    kind: 'reply',
+    subject: opts.subject.startsWith('Re:') ? opts.subject : `Re: ${opts.subject}`,
+    body: opts.body,
+    ctaLabel: 'Track your shipment',
+    ctaUrl: `/track/${opts.shipment.id}`,
+    at: opts.at,
+    delivery: { state: 'simulated', to: opts.to, detail: 'pre-seeded demo data' }
+  }
+}
+
+function minsAgo(m: number): string {
+  return new Date(Date.now() - m * 60_000).toISOString()
+}
+
+const SEED_SIGNATURE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="70"><path d="M15 45 C 40 12, 62 58, 92 32 S 138 18, 168 40 S 195 30, 205 36" stroke="#1a2433" fill="none" stroke-width="2.5" stroke-linecap="round"/></svg>'
+)
+
+function reviewShot(name: string, stars: number, text: string, platform: string): string {
+  const star = '★'.repeat(stars) + '☆'.repeat(5 - stars)
+  const safe = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const line1 = text.slice(0, 58)
+  const line2 = text.slice(58, 116)
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="380" height="168">
+      <rect width="380" height="168" rx="10" fill="#ffffff"/>
+      <rect x="0.5" y="0.5" width="379" height="167" rx="10" fill="none" stroke="#e5e7eb"/>
+      <text x="18" y="32" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#221f1f">${safe(name)}</text>
+      <text x="18" y="56" font-family="Segoe UI, Arial" font-size="16" fill="#f59e0b">${star}</text>
+      <text x="18" y="86" font-family="Segoe UI, Arial" font-size="13" fill="#3a3432">${safe(line1)}</text>
+      <text x="18" y="106" font-family="Segoe UI, Arial" font-size="13" fill="#3a3432">${safe(line2)}</text>
+      <text x="18" y="148" font-family="Segoe UI, Arial" font-size="11" fill="#69727d">${safe(platform)} · Public review</text>
+    </svg>`
+  )
+}
+
+// Standing rate cards — static, not persisted
+export const RATE_CARDS: Quote[] = [
+  {
+    ref: 'QT-CN-LCL',
+    title: 'Sea Freight Import — LCL ex-China',
+    route: 'Shanghai / Shenzhen (CNSHA / CNSZX) → Singapore (SGSIN)',
+    containerType: 'LCL — general cargo, non-hazardous',
+    carrier: 'LCL consolidation',
+    validUntil: '2026-09-30',
+    showSubtotals: false,
+    sections: [
+      {
+        key: 'A',
+        title: 'Ocean freight & surcharges',
+        currency: 'USD',
+        lines: [
+          { label: 'Ocean freight', amount: 50, unit: '/m³' },
+          { label: 'General rate increase (GRI)', amount: 10, unit: '/m³' },
+          { label: 'Emergency bunker surcharge (EBS)', amount: 15, unit: '/RT' }
+        ]
+      },
+      {
+        key: 'B',
+        title: 'Origin charges (China)',
+        currency: 'USD',
+        lines: [
+          { label: 'CFS', amount: 15, unit: '/RT' },
+          { label: 'Documentation (DOC)', amount: 30, unit: '/BL' },
+          { label: 'Customs', amount: 40, unit: '/BL' },
+          { label: 'Collection cost', amount: null, note: 'TBA — case to case' }
+        ]
+      },
+      {
+        key: 'C',
+        title: 'Singapore local charges',
+        currency: 'SGD',
+        lines: [
+          { label: 'LCL charges', amount: 18, unit: '/w-m' },
+          { label: 'THC', amount: 9, unit: '/w-m' },
+          { label: 'PSA wharfage', amount: 1.75, unit: '/w-m' },
+          { label: 'Delivery order fee', amount: 180, unit: '/set' },
+          { label: 'Agency fee', amount: 60, unit: '/shipment' },
+          { label: 'Import permit', amount: 40, unit: '/set' },
+          { label: 'Clearance charges', amount: 50, unit: '/shipment' },
+          { label: 'Transportation', amount: 90, unit: '/trip', note: 'or SGD 9.50/w-m · subject to GST' },
+          { label: 'Import processing fee', amount: 35, unit: '/shipment' },
+          { label: 'Cargo tracing fee', amount: 15, unit: '/shipment' },
+          { label: 'Forklift', amount: 55, unit: '/3 cbm' },
+          { label: 'FTZ surcharges', amount: 6, unit: '/w-m' },
+          { label: 'Surge fee', amount: 8, unit: '/w-m' },
+          { label: 'Tailgate', amount: 60, excluded: true, note: 'if required' },
+          { label: 'Labour cost', amount: 70, excluded: true, note: 'if required' },
+          { label: 'Warehouse surcharges', amount: 0, note: 'waived' },
+          { label: 'Admin surcharges', amount: 0, note: 'waived' },
+          { label: 'Singapore GST', amount: null, note: 'at cost, on cargo value' }
+        ]
+      }
+    ],
+    notes: [
+      'Excludes insurance coverage.',
+      'Transport rate assumes industrial / warehouse areas with proper unloading facilities.'
+    ]
+  }
+]
+
+export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] } {
+  // Scenario 1 — B2B freight forwarding: Allmighty Foods ingredient import,
+  // container ex-Busan discharged at PSA, customs cleared, drayage to Senoko
+  const s1: Shipment = {
+    id: 'MP-4471-AF',
+    mode: 'b2b',
+    service: 'Sea freight import + customs + drayage',
+    status: 'in_transit',
+    customerName: 'Melissa Tan',
+    customerEmail: 'melissa@allmightyfoods.com.sg',
+    company: 'Allmighty Foods Pte Ltd',
+    poNumber: 'PO-4471',
+    incoterms: 'EXW',
+    origin: 'PSA Pasir Panjang Terminal 3',
+    destination: 'Allmighty Foods, Senoko Food Hub',
+    eta: new Date(Date.now() + 3 * 3600_000).toISOString(),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: 'Prime mover — XD 4521 K',
+    pieces: 1,
+    weightKg: 11200,
+    description: "20' container TEMU 482391-0 — konjac flour & oat fibre (ex-Busan, SINOKOR)",
+    events: [],
+    documents: [
+      { key: 'bl', label: 'Bill of lading (HBL)', required: true, status: 'approved', fileName: 'SEARASI-HBL.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 24) },
+      { key: 'noa', label: 'Arrival notice', required: true, status: 'approved', fileName: 'NOA-OI2103.pdf', uploadedBy: 'Consol agent', at: minsAgo(60 * 22) },
+      { key: 'permit', label: 'Import permit (TradeNet)', required: true, status: 'approved', fileName: 'permit-MP4471.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 6) },
+      { key: 'auth', label: 'Haulier authorisation letter', required: true, status: 'uploaded', fileName: 'auth-letter.pdf', uploadedBy: 'Allmighty Foods', at: minsAgo(60 * 5), note: 'Haulier: NEK Logistics · CR 199402400H' },
+      { key: 'slip', label: 'Payment transfer slip', required: true, status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'SGD 485.00 local charges — upload proof of transfer' },
+      { key: 'photos', label: 'Container photos (yard)', required: false, status: 'pending', note: 'Or ask your driver — photos posted to the timeline count too' }
+    ],
+    quote: {
+      ref: 'QT-2481',
+      title: "Sea Freight Import — FCL 20' Dry",
+      route: 'Busan (KRPUS) → Singapore (SGSIN)',
+      containerType: "20' dry container, non-hazardous cargo",
+      carrier: 'SINOKOR',
+      validUntil: '2026-09-30',
+      sections: [
+        {
+          key: 'A',
+          title: 'Origin ex-works charges',
+          currency: 'USD',
+          lines: [
+            { label: 'Pick-up charge to Busan', amount: 870, unit: "/20'" },
+            { label: 'Export clearance', amount: 60, unit: '/shipment', note: '0.25% of invoice value, min USD 60' },
+            { label: 'Origin port charge', amount: 145, unit: "/20'" },
+            { label: 'Documentation fee', amount: 60, unit: '/BL' }
+          ]
+        },
+        {
+          key: 'B',
+          title: 'Ocean freight',
+          currency: 'USD',
+          subtitle: 'SINOKOR · subject to space & empty equipment',
+          lines: [
+            { label: 'Ocean freight', amount: 1250, unit: "/20'" },
+            { label: 'Low sulphur surcharge (LSS)', amount: 240, unit: "/20'" }
+          ]
+        },
+        {
+          key: 'C',
+          title: 'Singapore local charges',
+          currency: 'SGD',
+          lines: [
+            { label: 'Terminal handling (THC)', amount: 230, unit: "/20'" },
+            { label: 'DO fee', amount: 180, unit: '/set' },
+            { label: 'Agency fee', amount: 60, unit: '/shipment' },
+            { label: 'Import permit', amount: 40, unit: '/set' },
+            { label: 'FCL charges', amount: 50, unit: '/shipment' },
+            { label: 'Import trucking to your warehouse', amount: 160, unit: "/20'", note: 'subject to GST' },
+            { label: 'LOLO', amount: 59, unit: "/20'" },
+            { label: 'Depot', amount: 50, unit: '/cntr' },
+            { label: 'Portnet', amount: 10, unit: '/cntr' },
+            { label: 'CMS', amount: 15, unit: '/cntr', note: 'subject to GST' },
+            { label: 'Fuel surcharge', amount: 45, unit: '/cntr' },
+            { label: 'Outskirt surcharge', amount: 70, unit: '/cntr' },
+            { label: 'Tuas terminal surcharge', amount: 100, unit: '/cntr', excluded: true, note: 'only if vessel berths at Tuas Terminal' }
+          ]
+        },
+        {
+          key: 'D',
+          title: 'At cost',
+          currency: 'SGD',
+          lines: [
+            { label: 'Other charges from yard', amount: null, note: 'washing / detention / demurrage etc.' },
+            { label: 'Singapore GST', amount: null, note: '9%, where applicable' }
+          ]
+        }
+      ],
+      notes: [
+        'Rates exclude palletisation / unstuffing.',
+        'Tuas terminal surcharge applies only if the vessel berths at the new Tuas Terminal.',
+        'Subject to space & empty equipment availability.'
+      ]
+    },
+    createdAt: minsAgo(60 * 26)
+  }
+  addEvent(s1, { type: 'created', actor: 'cs', note: 'Import job booked, tracking link shared with Allmighty Foods', at: minsAgo(60 * 26) })
+  addEvent(s1, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 26) })
+  addEvent(s1, { type: 'note', actor: 'cs', note: 'Vessel berthed, container discharged at Pasir Panjang T3', at: minsAgo(60 * 9) })
+  addEvent(s1, { type: 'note', actor: 'cs', note: 'SG Customs cleared — TradeNet permit approved', at: minsAgo(60 * 6) })
+  addEvent(s1, { type: 'status', status: 'picked_up', actor: 'driver', note: 'Container collected from PSA gate, seal intact', at: minsAgo(60 * 2) })
+  addEvent(s1, { type: 'status', status: 'in_transit', actor: 'driver', note: 'On the way to Senoko via AYE → SLE', at: minsAgo(80) })
+
+  // Scenario 2 — B2C last mile: Allmighty Foods online order to a consumer
+  const s2: Shipment = {
+    id: 'MP-7302-AF',
+    mode: 'b2c',
+    service: 'Last-mile delivery',
+    status: 'out_for_delivery',
+    customerName: 'Daniel Wong',
+    customerEmail: 'daniel.wong@gmail.com',
+    origin: 'Allmighty Foods warehouse, Senoko Food Hub',
+    destination: 'Blk 512 Bedok North Ave 2, #07-134',
+    eta: new Date(Date.now() + 45 * 60_000).toISOString(),
+    driverName: 'Suresh Kumar',
+    driverPhone: '92345678',
+    vehicle: 'Van — GX 8814 D',
+    pieces: 2,
+    weightKg: 6,
+    description: 'Online order #AMF-10482 — konjac jelly & noodle bundle',
+    events: [],
+    createdAt: minsAgo(60 * 8)
+  }
+  addEvent(s2, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent to customer', at: minsAgo(60 * 8) })
+  addEvent(s2, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 8) })
+  addEvent(s2, { type: 'status', status: 'picked_up', actor: 'driver', note: 'Order collected from Senoko warehouse', at: minsAgo(90) })
+  addEvent(s2, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(75) })
+  addEvent(s2, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: '3 stops away, Bedok North area', at: minsAgo(20) })
+
+  // Scenario 3 — B2SELF last mile: Hey Fran restocking their own pop-up
+  const s3: Shipment = {
+    id: 'MP-5108-HF',
+    mode: 'b2self',
+    service: 'Last-mile delivery (own outlets)',
+    status: 'picked_up',
+    customerName: 'Fran Lim',
+    customerEmail: 'fran@heyfran.com',
+    company: 'Hey Fran',
+    poNumber: 'TRF-0219',
+    origin: 'Hey Fran HQ & warehouse, Kaki Bukit Ave 1',
+    destination: 'Hey Fran pop-up, Orchard Central #02-18',
+    eta: new Date(Date.now() + 2 * 3600_000).toISOString(),
+    driverName: 'Azlan Ismail',
+    driverPhone: '93456789',
+    vehicle: 'Van — GY 3307 A',
+    pieces: 9,
+    weightKg: 110,
+    description: 'Outlet restock — retail stock, packaging & display fixtures',
+    events: [],
+    createdAt: minsAgo(60 * 3)
+  }
+  addEvent(s3, { type: 'created', actor: 'cs', note: 'Internal transfer booked, tracking link shared with Hey Fran team', at: minsAgo(60 * 3) })
+  addEvent(s3, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 3) })
+  addEvent(s3, { type: 'status', status: 'picked_up', actor: 'driver', note: 'Loaded 9 boxes at Kaki Bukit, sealing van', at: minsAgo(25) })
+
+  // Scenario 4 — B2B LCL import at quotation stage: Allmighty Foods jelly cartons
+  const s4: Shipment = {
+    id: 'MP-6220-AF',
+    mode: 'b2b',
+    service: 'LCL sea import + customs + delivery',
+    status: 'booked',
+    customerName: 'Esther Ng',
+    customerEmail: 'esther@allmightyfoods.com.sg',
+    company: 'Allmighty Foods Pte Ltd',
+    poNumber: 'PO-4512',
+    incoterms: 'EXW',
+    origin: 'Shipper facility, Gyeonggi-do → Busan CFS',
+    destination: 'Allmighty Foods, Senoko Food Hub',
+    eta: new Date(Date.now() + 5 * 24 * 3600_000).toISOString(),
+    driverName: 'Unassigned',
+    vehicle: '—',
+    pieces: 376,
+    weightKg: 5078,
+    description: 'Jelly-filled cartons ×375 + 1 pallet spare flat cartons — 10.971 m³ / 4,687.5 kg',
+    events: [],
+    quote: {
+      ref: 'QT-6220',
+      title: 'Sea Freight Import — LCL ex-Korea',
+      route: 'Busan (KRPUS) → Singapore (SGSIN)',
+      containerType: 'LCL — 1 pallet + 375 cartons',
+      carrier: 'LCL consolidation',
+      validUntil: '2026-09-30',
+      cargo: [
+        'Spare flat cartons — 1 pallet / 3,000 pcs / 390 kg ≈ 1.5 m³',
+        'Jelly-filled cartons — 375 ctns @ 41 × 22 × 28 cm, 12.5 kg each = 4,687.5 kg / 9.471 m³',
+        'Total chargeable: 10.971 m³ (w/m)'
+      ],
+      showSubtotals: false,
+      lumpSum: {
+        amount: 3943.04,
+        currency: 'SGD',
+        note: 'USD 1,931.50 × 1.43 + SGD 1,180.99 · subject to GST, customs clearance (FOB × 0.15%, min USD 60) & palletisation USD 80/pallet'
+      },
+      sections: [
+        {
+          key: 'A',
+          title: 'Ocean freight & surcharges',
+          currency: 'USD',
+          subtitle: 'Per revenue ton (RT), EXW — rate subject to change if cargo detail changes',
+          lines: [
+            { label: 'Ocean freight', amount: 30, unit: '/RT' },
+            { label: 'Low sulphur surcharge (LSS)', amount: 13, unit: '/RT' },
+            { label: 'Peak season surcharge (PSS)', amount: 30, unit: '/RT' }
+          ]
+        },
+        {
+          key: 'B',
+          title: 'Origin charges (Korea)',
+          currency: 'USD',
+          lines: [
+            { label: 'CFS', amount: 6.5, unit: '/RT' },
+            { label: 'THC', amount: 6.5, unit: '/RT' },
+            { label: 'Wharfage (WFG)', amount: 1, unit: '/RT' },
+            { label: 'Documentation (DOC)', amount: 60, unit: '/BL' },
+            { label: 'Handling (HDL)', amount: 40, unit: '/BL' },
+            { label: 'Drayage (SHTV)', amount: 7, unit: '/RT', note: 'VAT 10%' },
+            { label: 'Trucking charge', amount: 800, unit: '/shpt' },
+            { label: 'Customs clearance fee', amount: null, note: 'FOB value × 0.15%, min USD 60/shpt' },
+            { label: 'Palletisation (packing charge)', amount: 80, unit: '/pallet' }
+          ]
+        },
+        {
+          key: 'C',
+          title: 'Singapore local charges',
+          currency: 'SGD',
+          lines: [
+            { label: 'LCL charges', amount: 18, unit: '/w-m' },
+            { label: 'THC', amount: 9, unit: '/w-m' },
+            { label: 'PSA wharfage', amount: 1.75, unit: '/w-m' },
+            { label: 'Delivery order fee', amount: 180, unit: '/set' },
+            { label: 'Agency fee', amount: 60, unit: '/shipment' },
+            { label: 'Import permit', amount: 40, unit: '/set' },
+            { label: 'Clearance charges', amount: 50, unit: '/shipment' },
+            { label: 'Transportation', amount: 90, unit: '/trip', note: 'or SGD 9.50/w-m · subject to GST' },
+            { label: 'Import processing fee', amount: 35, unit: '/shipment' },
+            { label: 'Cargo tracing fee', amount: 15, unit: '/shipment' },
+            { label: 'Forklift', amount: 55, unit: '/3 cbm' },
+            { label: 'FTZ surcharges', amount: 6, unit: '/w-m' },
+            { label: 'Surge fee', amount: 8, unit: '/w-m' },
+            { label: 'Tailgate', amount: 60, excluded: true, note: 'if required' },
+            { label: 'CBD area surcharge', amount: 60, excluded: true, note: 'if required' },
+            { label: 'Labour cost', amount: 70, excluded: true, note: 'if required' },
+            { label: 'Warehouse surcharges', amount: 0, note: 'waived' },
+            { label: 'Admin surcharges', amount: 0, note: 'waived' },
+            { label: 'Singapore GST', amount: null, note: 'at cost, on cargo value' }
+          ]
+        }
+      ],
+      notes: [
+        'Excludes insurance coverage.',
+        'Transport rate assumes industrial / warehouse areas with proper unloading facilities.',
+        'EXW rate subject to change if cargo details change.'
+      ],
+      updates: [
+        { from: 'M&P · Jason', at: minsAgo(60 * 48), text: 'EXW rate card shared (sections above). Rates subject to change if cargo detail changes.' },
+        { from: 'Allmighty Foods · Esther', at: minsAgo(60 * 30), text: 'Thanks! Can we get an estimated lump sum for the full consignment (10.971 m³)?' },
+        { from: 'M&P · Jason', at: minsAgo(60 * 26), text: 'Estimated lump sum: USD 1,931.50 × 1.43 + SGD 1,180.99 = SGD 3,943.04. Subject to Singapore GST, customs clearance fee (FOB value × 0.15%, min USD 60) and palletisation USD 80/pallet.' },
+        { from: 'Allmighty Foods · Esther', at: minsAgo(60 * 22), text: 'Please also check FCL 20ft: (a) truck the container to shipper for stuffing — total cost; (b) truck the container to our end and we unstuff ourselves.' },
+        { from: 'M&P · Jason', at: minsAgo(60 * 4), text: 'Checking FCL 20ft rates and both stuffing options with our Korea team — will revert shortly.' }
+      ]
+    },
+    createdAt: minsAgo(60 * 49)
+  }
+  addEvent(s4, { type: 'created', actor: 'cs', note: 'Enquiry received — quotation QT-6220 shared with Allmighty Foods', at: minsAgo(60 * 49) })
+  addEvent(s4, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 49) })
+  addEvent(s4, { type: 'note', actor: 'cs', note: 'Awaiting confirmation — FCL 20ft comparison in progress', at: minsAgo(60 * 4) })
+
+  // Scenario 5 — B2B LCL import ex-Hong Kong for Mecha (mecha.store)
+  const s5: Shipment = {
+    id: 'MP-3318-MC',
+    mode: 'b2b',
+    service: 'LCL sea import (HK → SG)',
+    status: 'in_transit',
+    customerName: 'Brendan De Souza',
+    customerEmail: 'brendan@mecha.store',
+    company: 'Mecha',
+    poNumber: 'EXW-HK-1201',
+    incoterms: 'EXW',
+    origin: 'Shipper warehouse, Kowloon → HK CFS',
+    destination: 'Mecha, Singapore',
+    eta: new Date(Date.now() + 2 * 24 * 3600_000).toISOString(),
+    driverName: 'Unassigned',
+    vehicle: '—',
+    pieces: 32,
+    weightKg: 296,
+    description: '32 cartons — 295.52 kg / 1.299 m³ (LCL, vessel HONGKONG BRIDGE V.0055S)',
+    events: [],
+    documents: [
+      { key: 'hbl', label: 'House bill of lading (draft)', required: true, status: 'uploaded', fileName: 'HBL-ICS-draft.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 68), note: 'Check & approve — becomes final on vessel departure' },
+      { key: 'cinv', label: 'Commercial invoice', required: true, status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'Needed for import permit declaration' },
+      { key: 'plist', label: 'Packing list', required: true, status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString() },
+      { key: 'gst', label: 'GST payment advice', required: true, status: 'pending', note: 'GST is cash/COD term — upload transfer proof before delivery' }
+    ],
+    quote: {
+      ref: 'QT-3318',
+      title: 'Sea Freight Import — LCL ex-Hong Kong',
+      route: 'Hong Kong (HKHKG) → Singapore (SGSIN)',
+      containerType: 'LCL — 32 cartons',
+      carrier: 'LCL consolidation',
+      validUntil: '2026-09-30',
+      cargo: ['32 cartons — 295.52 kg / 1.299 m³ chargeable (w/m)'],
+      showSubtotals: false,
+      lumpSum: {
+        amount: 1224.13,
+        currency: 'SGD',
+        note: 'USD 392.94 × 1.38 + SGD 681.87 · subject to carpark fee, shipper warehouse gate charges, export declaration (CIF HKD × 0.025%, min HKD 15 + HKD 100 handling) & GST'
+      },
+      sections: [
+        {
+          key: 'A',
+          title: 'Ocean freight & origin (Hong Kong)',
+          currency: 'USD',
+          lines: [
+            { label: 'Ocean freight', amount: 20, unit: '/m³' },
+            { label: 'CFS', amount: 40, unit: '/RT' },
+            { label: 'Handling', amount: 65, unit: '/set' },
+            { label: 'Documentation fee', amount: 60, unit: '/set' },
+            { label: 'Pick-up fee', amount: 0.25, unit: '/kg', note: 'or USD 20/cbm · min USD 120' },
+            { label: 'CFS warehouse gate charge', amount: 70, unit: '/shpt' },
+            { label: 'Carpark fee', amount: null, note: 'at cost' },
+            { label: "Shipper's warehouse gate charges", amount: null, note: 'at cost' },
+            { label: 'Export declaration fee', amount: null, note: 'CIF value HKD × 0.025%, min HKD 15' },
+            { label: 'Export declaration handling', amount: null, note: 'HKD 100' }
+          ]
+        },
+        {
+          key: 'B',
+          title: 'Singapore local charges',
+          currency: 'SGD',
+          lines: [
+            { label: 'LCL charges', amount: 18, unit: '/w-m' },
+            { label: 'THC', amount: 9, unit: '/w-m' },
+            { label: 'PSA wharfage', amount: 1.75, unit: '/w-m' },
+            { label: 'Delivery order fee', amount: 150, unit: '/set' },
+            { label: 'Agency fee', amount: 60, unit: '/shipment' },
+            { label: 'Import permit', amount: 40, unit: '/set' },
+            { label: 'Clearance charges', amount: 50, unit: '/shipment' },
+            { label: 'Transportation', amount: 90, unit: '/trip', note: 'or SGD 9.50/w-m · subject to GST' },
+            { label: 'Import processing fee', amount: 35, unit: '/shipment' },
+            { label: 'Cargo tracing fee', amount: 15, unit: '/shipment' },
+            { label: 'Forklift', amount: 55, unit: '/3 cbm' },
+            { label: 'FTZ surcharges', amount: 6, unit: '/w-m' },
+            { label: 'Tailgate', amount: 60, excluded: true, note: 'if required' },
+            { label: 'Labour cost', amount: 70, excluded: true, note: 'if required' },
+            { label: 'Warehouse surcharges', amount: 0, note: 'waived' },
+            { label: 'Admin surcharges', amount: 0, note: 'waived' },
+            { label: 'Singapore GST', amount: null, note: 'at cost, on cargo value' }
+          ]
+        }
+      ],
+      notes: [
+        'Excludes insurance coverage.',
+        'Transport rate assumes industrial / warehouse areas with proper unloading facilities.'
+      ],
+      updates: [
+        { from: 'M&P · Joreen', at: minsAgo(60 * 144), text: 'LCL quotation shared — estimated lump sum SGD 1,224.13 for 32 ctns / 1.299 m³.' },
+        { from: 'M&P · Joreen', at: minsAgo(60 * 138), text: 'HK agent assigned: Super Nova Logistics (Mr Fong, +852 2765 8741). Please share shipper details.' },
+        { from: 'Mecha · Brendan', at: minsAgo(60 * 120), text: 'Shipper details sent — Brendan handling this shipment going forward.' },
+        { from: 'M&P · Joreen', at: minsAgo(60 * 96), text: 'HK side has reached the shipper — booking form will be submitted today.' },
+        { from: 'M&P · Joreen', at: minsAgo(60 * 72), text: 'Cargo collected. Booked on HONGKONG BRIDGE V.0055S — ETA Singapore in 2 days.' },
+        { from: 'Mecha · Brendan', at: minsAgo(60 * 70), text: 'Thanks for your work 😄⭐' },
+        { from: 'M&P · Christina', at: minsAgo(60 * 20), text: 'Vessel ETA updated per carrier. Will update delivery status once container is unstuffed.' }
+      ]
+    },
+    createdAt: minsAgo(60 * 144)
+  }
+  addEvent(s5, { type: 'created', actor: 'cs', note: 'Enquiry received via WhatsApp — LCL quotation QT-3318 shared', at: minsAgo(60 * 144) })
+  addEvent(s5, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 144) })
+  addEvent(s5, { type: 'note', actor: 'cs', note: 'HK agent assigned: Super Nova Logistics (Mr Fong)', at: minsAgo(60 * 138) })
+  addEvent(s5, { type: 'note', actor: 'cs', note: 'Shipper contacted — booking form submitted', at: minsAgo(60 * 96) })
+  addEvent(s5, { type: 'status', status: 'picked_up', actor: 'cs', note: 'Cargo collected at shipper warehouse, Kowloon', at: minsAgo(60 * 72) })
+  addEvent(s5, { type: 'status', status: 'in_transit', actor: 'cs', note: 'Loaded on HONGKONG BRIDGE V.0055S — ETA Singapore in 2 days', at: minsAgo(60 * 70) })
+
+  // Review-program seeds — delivered jobs that feed the rewards dashboard
+  const s6: Shipment = {
+    id: 'MP-8101-AF',
+    mode: 'b2b',
+    service: 'Last-mile delivery',
+    status: 'delivered',
+    customerName: 'Melissa Tan',
+    customerEmail: 'melissa@allmightyfoods.com.sg',
+    company: 'Allmighty Foods Pte Ltd',
+    poNumber: 'PO-4488',
+    incoterms: 'DAP',
+    origin: 'Allmighty Foods, Senoko Food Hub',
+    destination: 'RedMart DC, 20 Jurong Port Rd',
+    eta: minsAgo(60 * 20),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: '14-ft lorry — GBC 4521 K',
+    pieces: 48,
+    weightKg: 380,
+    description: 'Oat pasta cartons — weekly replenishment (4 pallets)',
+    events: [],
+    createdAt: minsAgo(60 * 30),
+    signoff: { name: 'Kumar (Receiving)', signature: SEED_SIGNATURE, at: minsAgo(60 * 19) },
+    review: {
+      rating: 5,
+      comment: 'On time, driver helped restack pallets. Great service!',
+      at: minsAgo(60 * 16),
+      screenshot: reviewShot('Melissa Tan', 5, 'On time, driver helped restack pallets. Great service!', 'Google'),
+      platforms: ['google', 'facebook'],
+      reward: { code: 'MP10OFF', at: minsAgo(60 * 12), value: 'Grab $10' }
+    }
+  }
+  addEvent(s6, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 30) })
+  addEvent(s6, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 30) })
+  addEvent(s6, { type: 'status', status: 'picked_up', actor: 'driver', note: 'Collected 4 pallets, Senoko bay 2', at: minsAgo(60 * 26) })
+  addEvent(s6, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 25) })
+  addEvent(s6, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Arriving Jurong Port Rd', at: minsAgo(60 * 21) })
+  addEvent(s6, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Kumar (Receiving)', at: minsAgo(60 * 19) })
+  addEvent(s6, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 19) })
+  addEvent(s6, { type: 'note', actor: 'customer', note: 'Customer left a 5-star review: "On time, driver helped restack pallets. Great service!"', at: minsAgo(60 * 16) })
+  addEvent(s6, { type: 'note', actor: 'cs', note: 'Review approved — reward code MP10OFF emailed to customer', at: minsAgo(60 * 12) })
+
+  const s7: Shipment = {
+    id: 'MP-8110-AF',
+    mode: 'b2b',
+    service: 'Last-mile delivery',
+    status: 'delivered',
+    customerName: 'Esther Ng',
+    customerEmail: 'esther@allmightyfoods.com.sg',
+    company: 'Allmighty Foods Pte Ltd',
+    poNumber: 'PO-4490',
+    incoterms: 'DAP',
+    origin: 'Allmighty Foods, Senoko Food Hub',
+    destination: 'GreenMart Distribution Centre, Tuas',
+    eta: minsAgo(60 * 28),
+    driverName: 'Hafiz Rahman',
+    driverPhone: '91234567',
+    vehicle: '14-ft lorry — GBC 4521 K',
+    pieces: 60,
+    weightKg: 495,
+    description: 'Jelly cartons — 5 pallets, ambient',
+    events: [],
+    createdAt: minsAgo(60 * 40),
+    signoff: { name: 'Ahmad (GreenMart inbound)', signature: SEED_SIGNATURE, at: minsAgo(60 * 27) },
+    review: {
+      rating: 4,
+      comment: 'Smooth delivery, slight delay at the gate but driver kept us posted.',
+      at: minsAgo(60 * 20),
+      screenshot: reviewShot('Esther Ng', 4, 'Smooth delivery, slight delay at the gate but driver kept us posted.', 'Google'),
+      platforms: ['google']
+    }
+  }
+  addEvent(s7, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 40) })
+  addEvent(s7, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 40) })
+  addEvent(s7, { type: 'status', status: 'picked_up', actor: 'driver', note: '5 pallets loaded', at: minsAgo(60 * 34) })
+  addEvent(s7, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 33) })
+  addEvent(s7, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Queueing at GreenMart gate, ~20 min', at: minsAgo(60 * 29) })
+  addEvent(s7, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Ahmad (GreenMart inbound)', at: minsAgo(60 * 27) })
+  addEvent(s7, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 27) })
+  addEvent(s7, { type: 'note', actor: 'customer', note: 'Customer left a 4-star review: "Smooth delivery, slight delay at the gate but driver kept us posted."', at: minsAgo(60 * 20) })
+
+  const s8: Shipment = {
+    id: 'MP-8102-AF',
+    mode: 'b2c',
+    service: 'Last-mile delivery',
+    status: 'delivered',
+    customerName: 'Priya Nair',
+    customerEmail: 'priya.nair@example.sg',
+    origin: 'Allmighty Foods warehouse, Senoko Food Hub',
+    destination: 'Blk 88 Tampines St 81, #11-203',
+    eta: minsAgo(60 * 5),
+    driverName: 'Suresh Kumar',
+    driverPhone: '92345678',
+    vehicle: 'Van — GX 8814 D',
+    pieces: 1,
+    weightKg: 3,
+    description: 'Online order #AMF-10513 — gummies & jelly pack',
+    events: [],
+    createdAt: minsAgo(60 * 10),
+    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 5) }
+  }
+  addEvent(s8, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 10) })
+  addEvent(s8, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 10) })
+  addEvent(s8, { type: 'status', status: 'picked_up', actor: 'driver', at: minsAgo(60 * 8) })
+  addEvent(s8, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 7) })
+  addEvent(s8, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Tampines area, 2 stops away', at: minsAgo(60 * 6) })
+  addEvent(s8, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Priya Nair', at: minsAgo(60 * 5) })
+  addEvent(s8, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 5) })
+
+  const s9: Shipment = {
+    id: 'MP-8112-HF',
+    mode: 'b2self',
+    service: 'Last-mile delivery (own outlets)',
+    status: 'delivered',
+    customerName: 'Fran Lim',
+    customerEmail: 'fran@heyfran.com',
+    company: 'Hey Fran',
+    poNumber: 'TRF-0220',
+    origin: 'Hey Fran HQ & warehouse, Kaki Bukit Ave 1',
+    destination: 'Hey Fran pop-up, Orchard Central #02-18',
+    eta: minsAgo(60 * 48),
+    driverName: 'Azlan Ismail',
+    driverPhone: '93456789',
+    vehicle: 'Van — GY 3307 A',
+    pieces: 8,
+    weightKg: 96,
+    description: 'Weekend restock — retail stock & display cards',
+    events: [],
+    createdAt: minsAgo(60 * 56),
+    signoff: { name: 'Fran Lim', signature: SEED_SIGNATURE, at: minsAgo(60 * 47) },
+    review: {
+      rating: 5,
+      comment: 'Van arrived before opening — stock was on the floor in 15 minutes.',
+      at: minsAgo(60 * 44),
+      screenshot: reviewShot('Fran Lim', 5, 'Van arrived before opening — stock was on the floor in 15 minutes.', 'Facebook'),
+      platforms: ['facebook'],
+      reward: { code: 'GRAB10-HF', at: minsAgo(60 * 40), value: 'Grab $10' }
+    }
+  }
+  addEvent(s9, { type: 'created', actor: 'cs', note: 'Internal transfer booked, tracking link shared', at: minsAgo(60 * 56) })
+  addEvent(s9, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 56) })
+  addEvent(s9, { type: 'status', status: 'picked_up', actor: 'driver', note: '8 boxes loaded at Kaki Bukit', at: minsAgo(60 * 52) })
+  addEvent(s9, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 51) })
+  addEvent(s9, { type: 'status', status: 'out_for_delivery', actor: 'driver', at: minsAgo(60 * 49) })
+  addEvent(s9, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Fran Lim', at: minsAgo(60 * 47) })
+  addEvent(s9, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 47) })
+  addEvent(s9, { type: 'note', actor: 'customer', note: 'Customer left a 5-star review: "Van arrived before opening — stock was on the floor in 15 minutes."', at: minsAgo(60 * 44) })
+  addEvent(s9, { type: 'note', actor: 'cs', note: 'Review approved — reward code GRAB10-HF emailed to customer', at: minsAgo(60 * 40) })
+
+  // Same job, different inboxes — colleague / Gmail / personal
+  s1.contacts = [
+    { email: s1.customerEmail, name: s1.customerName, source: 'booking' },
+    { email: 'esther@allmightyfoods.com.sg', name: 'Esther Ng', source: 'inbound', at: minsAgo(50) }
+  ]
+  addEvent(s1, { type: 'note', actor: 'cs', note: '📩 esther@allmightyfoods.com.sg wrote in from the company domain (new address esther@allmightyfoods.com.sg)', at: minsAgo(50) })
+  addEvent(s1, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "Container TEMU 482391-0 — customs?"', at: minsAgo(49) })
+
+  s5.contacts = [
+    { email: s5.customerEmail, name: s5.customerName, source: 'booking' },
+    { email: 'brendan.ds@gmail.com', name: 'Brendan De Souza', source: 'inbound', at: minsAgo(60 * 18) }
+  ]
+  addEvent(s5, { type: 'note', actor: 'cs', note: '📩 brendan.ds@gmail.com wrote in quoting this job (new address brendan.ds@gmail.com)', at: minsAgo(60 * 18) })
+  addEvent(s5, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "MP-3318-MC — any update on unstuffing?"', at: minsAgo(60 * 17) })
+
+  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9]
+  const emails: OutboxEmail[] = [
+    ...[s1, s2, s3, s5, s6, s7, s8, s9].map((s) => buildTrackingEmail(s, s.createdAt)),
+    buildReviewEmail(s6, minsAgo(60 * 18)),
+    buildRewardEmail(s6, 'MP10OFF', minsAgo(60 * 12)),
+    buildReviewEmail(s7, minsAgo(60 * 26)),
+    buildReviewEmail(s8, minsAgo(60 * 4)),
+    buildReviewEmail(s9, minsAgo(60 * 46)),
+    buildRewardEmail(s9, 'GRAB10-HF', minsAgo(60 * 40)),
+    buildInboundEmail({
+      id: 'in-4471-esther',
+      shipment: s1,
+      from: 'esther@allmightyfoods.com.sg',
+      fromName: 'Esther Ng',
+      subject: 'Container TEMU 482391-0 — customs?',
+      body: 'Hi M&P,\n\nMelissa is out today. Has SG Customs cleared MP-4471-AF? We need the truck window for Senoko tomorrow.\n\nThanks,\nEsther',
+      at: minsAgo(50),
+      matchedBy: 'company-domain'
+    }),
+    buildCsReplyEmail({
+      id: 'out-4471-esther',
+      shipment: s1,
+      to: 'esther@allmightyfoods.com.sg',
+      subject: 'Container TEMU 482391-0 — customs?',
+      body: 'Hi Esther,\n\nYes — TradeNet permit is approved and the container is on the way to Senoko via AYE → SLE. Live status is on the tracking button below.\n\n— M&P Customer Service (AI assistant)',
+      at: minsAgo(49)
+    }),
+    buildInboundEmail({
+      id: 'in-3318-gmail',
+      shipment: s5,
+      from: 'brendan.ds@gmail.com',
+      fromName: 'Brendan De Souza',
+      subject: 'MP-3318-MC — any update on unstuffing?',
+      body: 'Hi, emailing from my Gmail — office Outlook is down. Has HONGKONG BRIDGE unstuffed yet? Need to plan delivery.\n\nBrendan',
+      at: minsAgo(60 * 18),
+      matchedBy: 'shipment-id'
+    }),
+    buildCsReplyEmail({
+      id: 'out-3318-gmail',
+      shipment: s5,
+      to: 'brendan.ds@gmail.com',
+      subject: 'MP-3318-MC — any update on unstuffing?',
+      body: 'Hi Brendan,\n\nMP-3318-MC is still in transit on HONGKONG BRIDGE V.0055S — ETA Singapore in 2 days. We will update delivery once the container is unstuffed.\n\n— M&P Customer Service (AI assistant)',
+      at: minsAgo(60 * 17)
+    })
+  ]
+  return { shipments, emails }
+}
+
+export function labelFor(status: ShipmentStatus): string {
+  return STATUS_LABELS[status]
+}

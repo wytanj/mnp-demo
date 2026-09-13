@@ -1,0 +1,17 @@
+{
+  "name": "M&P Track",
+  "short_name": "M&P Track",
+  "description": "Live shipment tracking, driver updates and e-signature POD by M&P International Freights.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f1f3",
+  "theme_color": "#221f1f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

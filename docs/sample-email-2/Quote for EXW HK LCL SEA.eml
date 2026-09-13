@@ -1,0 +1,3526 @@
+Delivered-To: wytanj@gmail.com
+Received: by 2002:a05:6a10:3201:0:0:0:0 with SMTP id a1csp1199898pxc;
+        Thu, 17 Dec 2020 00:49:41 -0800 (PST)
+X-Received: by 2002:a63:308:: with SMTP id 8mr21123112pgd.15.1608194981296;
+        Thu, 17 Dec 2020 00:49:41 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1608194981; cv=none;
+        d=google.com; s=arc-20160816;
+        b=np1W9RpvT5E02F5ezDgKYDw446Irpd01ehAI4cqU/fjZjCbLS0tctMMJyPLF3MIORo
+         CFgrDqOiHSdYJxZN4EyfFRx+d6hzuvRqVAp0eWAssZR6ZhgqvvTgAzjPxCfPSqP3vMjW
+         dG9xEdlzYERFzC08A/Hv7LEMYKg0ox6T7BQBAC/+bLvYCiUT4a9JCX6zu5eVt89DfyvK
+         qvs1bl8pNHhH3esg46fqRvGs0OOGYaGDAWwPEVvn0aClOAKq5hsbe8IIOvB44TNphipn
+         4cEaZvrxqLWFDAyL3typ4LIIikHiy/usOLXYiPVcHN6dGzq20ZX6qrU++XTXHtOATgSI
+         owJA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=content-language:thread-index:mime-version:message-id:date:subject
+         :in-reply-to:references:cc:to:from:dkim-signature;
+        bh=sfg6aRhoI5NobOzQUQQVDyJtVKpYPwPnuzau3B7IJ1Y=;
+        b=r8cCpl90DdzWm6DxbjFZPmVZhpE/ENCZju6B9SfTkFRnbXJic+yx/PTTqA41DH9pli
+         fqro0zUmGoHtPIKolw3JAeJ5o2t42mwJh9kcFo+RSPohwdYsDZCQDbRCujM3w0/3/crg
+         Z9rUd31LxRLCoXQceUB63+RuzELZrV4mfYpLlvUGsMou8/uZ8x72XcQ71AYXL5w9MXp3
+         GT38NkPxtpQK5UVf2TSqm2QcakXnLUoxyFbH3Ewt+8pvWK4OljjQXGljQkV/+FWrKit1
+         blxzkBtAsjSMYTaYb7UnsuPkGtHaS2YT3U8nqogHOQuhrxrx+0cG0gWSERm4LTY5BwUB
+         NlQQ==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@sin-mp-com-sg.20150623.gappssmtp.com header.s=20150623 header.b=X08Akl+2;
+       spf=pass (google.com: domain of cs@sin-mp.com.sg designates 209.85.220.41 as permitted sender) smtp.mailfrom=cs@sin-mp.com.sg
+Return-Path: <cs@sin-mp.com.sg>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id mq13sor2412700pjb.4.2020.12.17.00.49.41
+        for <wytanj@gmail.com>
+        (Google Transport Security);
+        Thu, 17 Dec 2020 00:49:41 -0800 (PST)
+Received-SPF: pass (google.com: domain of cs@sin-mp.com.sg designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@sin-mp-com-sg.20150623.gappssmtp.com header.s=20150623 header.b=X08Akl+2;
+       spf=pass (google.com: domain of cs@sin-mp.com.sg designates 209.85.220.41 as permitted sender) smtp.mailfrom=cs@sin-mp.com.sg
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=sin-mp-com-sg.20150623.gappssmtp.com; s=20150623;
+        h=from:to:cc:references:in-reply-to:subject:date:message-id
+         :mime-version:thread-index:content-language;
+        bh=sfg6aRhoI5NobOzQUQQVDyJtVKpYPwPnuzau3B7IJ1Y=;
+        b=X08Akl+2YPd7qYpLXQ2Pym94k25t3TgH30nc/OU/ypfG/AQ2I05vZ+Q2T5Eq/QczgW
+         f4YBMgiNbPl/s699KlT/hBfG44haucNisIURqnCeV1cxq7uk0a0hgXfeCWKGH2NuskkZ
+         X4p2B2rBi9+gdJK8YcLq2LZZuLuyS+oIztMBoV3EIj7wcs2v7sC1t85yvdYCVsYU3O2r
+         rz8T4HXcFN5Foz0elawYHyg91jsOdiP1Dm46EPMrDYA3np1ObUrprCCOrWCuaWPRsSfk
+         wZl9y3H0++U57kIpVjXgxh2rl6fp+2EZhXHccYfA+gJCcoKhW00D4dztYnskZigYHe/k
+         q4WQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:references:in-reply-to:subject:date
+         :message-id:mime-version:thread-index:content-language;
+        bh=sfg6aRhoI5NobOzQUQQVDyJtVKpYPwPnuzau3B7IJ1Y=;
+        b=ole4t1Pmx/6iq91pPwwlviR0OxBoCwSVPoQBCNPhINh26BgZsS7FeP+HhLE+HzfFaM
+         cg5EGEoIvjESKmb6j3bExb1plSSNPo/lLWghvqxkDPjgfmBbtkSN56rWkIWVxtjmeY10
+         yW4tCfzrXnQNce7Mr2CMdXKg/jwPu8QFeDsahH8HMLcXTTmjaBx4Ccgtt+hcbsqGAnfb
+         RXf6QXmsn8uPIqrbr9WwzPaTiVJFL4Jq0I9u/KbpcCKH5lNCnaBWpSj3jU+nCQkqkkTJ
+         ZsE0gFMXq/r4jukdQ/TO2k60aTVWgj0kVY4mu4l3pmJOVBPFWB+RPLsL5nLfpe3wA3mq
+         tRpg==
+X-Gm-Message-State: AOAM531wGpGtpY7a/o+xxvx8w2hIrDsDVxsrjnRK0YQyo7cV8ccjkFqh
+	23uh3zjPl6ayGbrg49JDr+o+j5Lp9QYWbg==
+X-Google-Smtp-Source: ABdhPJzfw4t90j6XTYQdNo2nrYV2c+Kv0b4pcKABApLYu2q9B+fdFI4L4j5lhI9M3cig044oFi+RFg==
+X-Received: by 2002:a17:90a:c905:: with SMTP id v5mr7027943pjt.183.1608194980892;
+        Thu, 17 Dec 2020 00:49:40 -0800 (PST)
+Return-Path: <cs@sin-mp.com.sg>
+Received: from PC270115 ([118.200.248.56])
+        by smtp.gmail.com with ESMTPSA id m17sm5411591pgi.11.2020.12.17.00.49.37
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Thu, 17 Dec 2020 00:49:39 -0800 (PST)
+From: "Christina Ng - MPIF" <cs@sin-mp.com.sg>
+To: "'Jeremy Tan'" <wytanj@gmail.com>
+Cc: "'Joreen-M&P Int'l Freight Pte Ltd'" <joreen.boo@sin-mp.com.sg>,
+	"'Brendan De Souza \(Mecha\)'" <bdsm@mecha.store>
+References: <005001d6c888$f7e1b4c0$e7a51e40$@sin-mp.com.sg> <CAOSO=JcEJb_Rme1Bkcni9_d3TkCbjbDQFngzspU8uju30oOUuA@mail.gmail.com> <CADQDCX5no+-8ENbDzdHdLxP0_sB5yabkmG=Mg9mWGiTAK6Krxw@mail.gmail.com> <CAGDWXp2xSeySYpYp+o-rXH6zhCLyuKczPmta5LJd7RCQ32aJLA@mail.gmail.com> <031201d6cc53$bf3b8870$3db29950$@sin-mp.com.sg> <CAGDWXp2AW=1akdaX34uzuMgTqgJ_cz7zrt7WdouioVbKiBc9qg@mail.gmail.com> <032a01d6cc54$2d42ccc0$87c86640$@sin-mp.com.sg> 
+In-Reply-To: 
+Subject: RE: Quote for EXW HK LCL SEA
+Date: Thu, 17 Dec 2020 16:49:37 +0800
+Message-ID: <02c501d6d451$8e25a6c0$aa70f440$@sin-mp.com.sg>
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	boundary="----=_NextPart_000_02C6_01D6D494.9C5012B0"
+X-Mailer: Microsoft Outlook 15.0
+Thread-Index: AQIgmaJ750QBZ0OZnBREdL4GN+mClgIa/YdKAjcT2zIB8yxJ1QLAkyNjASsqFDIB3YFf26kB0dzggAUqBXA=
+Content-Language: en-us
+
+This is a multipart message in MIME format.
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0
+Content-Type: multipart/alternative;
+	boundary="----=_NextPart_001_02C7_01D6D494.9C5012B0"
+
+
+------=_NextPart_001_02C7_01D6D494.9C5012B0
+Content-Type: text/plain;
+	charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Dear Jeremy
+
+=20
+
+Please note that container unstuff already.
+
+We will arrange for delivery tomorrow 18/12/2020
+
+=20
+
+=20
+
+Best Regards,
+Christina Ng=20
+   =20
+
+M&P INTERNATIONAL FREIGHTS PTE LTD
+
+37 Jalan Pemimpin=20
+
+#04-10 and #04-12 (Warehouse)
+
+Mapex=20
+
+Singapore 577177=20
+
+=20
+
+* Phone : 65 6221 2218 ext 111
+
+* Mobile : 65 9002 0913
+
+* Fax : 65 6324 1629
+
+* Email : cs@sin-mp.com.sg <mailto:cs@sin-mp.com.sg>=20
+" Web : www.mp.com.sg <http://www.mp.com.sg/>=20
+
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=20
+
+<<All business is transacted only in accordance with SLA Standard =
+Trading Conditions (latest edition).>>=20
+
+**********************************************************************=20
+
+This message is confidential and intended solely for the use of the =
+named addressee(s).=20
+
+It may contain information that is covered or protected by legal, =
+professional or other privilege, work product immunity or other legal =
+rules. Any unauthorised use or dissemination of this message or any part =
+of it prohibited and liability (in negligence or otherwise) arising out =
+of any action, or forbearance, by a third party on information contained =
+in this message is hereby excluded. If you have received this =
+communication in error please notify us by return e-mail and then delete =
+this e-mail and any copies of it from your computer system. This e-mail =
+has been scanned for Viruses but it is your full responsibility for =
+Virus Checking.=20
+
+Thank you for your co-operation.
+
+=20
+
+From: Christina Ng - MPIF [mailto:cs@sin-mp.com.sg]=20
+Sent: Monday, December 14, 2020 09:58
+To: 'Jeremy Tan' <wytanj@gmail.com>
+Cc: 'Joreen-M&P Int'l Freight Pte Ltd' <joreen.boo@sin-mp.com.sg>; =
+'Brendan De Souza (Mecha)' <bdsm@mecha.store>
+Subject: RE: Quote for EXW HK LCL SEA
+
+=20
+
+Dear Jeremy
+
+=20
+
+Please note as per carrier, vesl ETA SIN 16/12/2020.
+
+Will update on the delivery status once available.
+
+=20
+
+=20
+
+=20
+
+=20
+
+Best Regards,
+Christina Ng=20
+   =20
+
+M&P INTERNATIONAL FREIGHTS PTE LTD
+
+37 Jalan Pemimpin=20
+
+#04-10 and #04-12 (Warehouse)
+
+Mapex=20
+
+Singapore 577177=20
+
+=20
+
+* Phone : 65 6221 2218 ext 111
+
+* Mobile : 65 9002 0913
+
+* Fax : 65 6324 1629
+
+* Email : cs@sin-mp.com.sg <mailto:cs@sin-mp.com.sg>=20
+" Web : www.mp.com.sg <http://www.mp.com.sg/>=20
+
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=20
+
+<<All business is transacted only in accordance with SLA Standard =
+Trading Conditions (latest edition).>>=20
+
+**********************************************************************=20
+
+This message is confidential and intended solely for the use of the =
+named addressee(s).=20
+
+It may contain information that is covered or protected by legal, =
+professional or other privilege, work product immunity or other legal =
+rules. Any unauthorised use or dissemination of this message or any part =
+of it prohibited and liability (in negligence or otherwise) arising out =
+of any action, or forbearance, by a third party on information contained =
+in this message is hereby excluded. If you have received this =
+communication in error please notify us by return e-mail and then delete =
+this e-mail and any copies of it from your computer system. This e-mail =
+has been scanned for Viruses but it is your full responsibility for =
+Virus Checking.=20
+
+Thank you for your co-operation.
+
+=20
+
+From: Joreen-M&P Int'l Freight Pte Ltd [mailto:joreen.boo@sin-mp.com.sg] =
+
+Sent: Monday, December 07, 2020 12:48
+To: 'Brendan De Souza (Mecha)' <bdsm@mecha.store =
+<mailto:bdsm@mecha.store> >
+Cc: 'Jeremy Tan' <wytanj@gmail.com <mailto:wytanj@gmail.com> >; =
+'Christina Ng - MPIF' <cs@sin-mp.com.sg <mailto:cs@sin-mp.com.sg> >
+Subject: RE: Quote for EXW HK LCL SEA
+
+=20
+
+You are most welcome
+
+Best & Warmest Regards,
+Joreen Boo / Assistant Sales Manager=20
+
+M&P International Freights Pte Ltd ( HP: +65 93851307 )=20
+
+Phone : 65 6221 2218 Ext 108  =20
+
+=20
+
+From: Brendan De Souza (Mecha) [mailto:bdsm@mecha.store]=20
+Sent: Monday, December 07, 2020 12:46
+To: Joreen-M&P Int'l Freight Pte Ltd
+Cc: Jeremy Tan; Christina Ng - MPIF
+Subject: Re: Quote for EXW HK LCL SEA
+
+=20
+
+Good day Joreen
+
+=20
+
+Thanks for your work
+
+=20
+
+=F0=9F=98=84=E2=AD=90
+
+=20
+
+On Mon, 7 Dec 2020, 12:45 pm Joreen-M&P Int'l Freight Pte Ltd, =
+<joreen.boo@sin-mp.com.sg <mailto:joreen.boo@sin-mp.com.sg> > wrote:
+
+Dear Brendan,
+
+=20
+
+Good day to you. as per HKG  side revert :-
+
+=20
+
+Dear Joreen,
+
+We had already collected the cargo and we will arrange to onboard below =
+sailing schedule:
+
+=20
+
+HONGKONG BRIDGE V.0055S
+
+ETD: 10 DEC 2020
+ETA: 15 DEC 2020
+
+=20
+
+Best & Warmest Regards,
+Joreen Boo / Assistant Sales Manager=20
+
+M&P International Freights Pte Ltd ( HP: +65 93851307 )=20
+
+Phone : 65 6221 2218 Ext 108  =20
+
+=20
+
+From: Brendan De Souza (Mecha) [mailto:bdsm@mecha.store =
+<mailto:bdsm@mecha.store> ]=20
+Sent: Friday, December 04, 2020 17:44
+To: Joreen Boo
+Cc: Jeremy Tan; Christina Ng - MPIF
+Subject: Re: Quote for EXW HK LCL SEA
+
+=20
+
+Thanks Joreen
+
+=20
+
+On Fri, 4 Dec 2020, 9:55 am Joreen Boo, <joreen.boo@sin-mp.com.sg =
+<mailto:joreen.boo@sin-mp.com.sg> > wrote:
+
+Dear All
+
+=20
+
+Good morning. As per hkg side revert,=20
+
+=20
+
+we had already reached to the shipper and they will fill in the booking =
+form to us by today.=20
+
+=20
+
+we will keep you posted on it.=20
+
+=20
+
+Thanks.=20
+
+=20
+
+Joreen Boo
+M&P International Freights Pte Ltd
++65 9385 1307=20
+
+=20
+
+On Thu, 3 Dec 2020, 11:12 Jeremy Tan, <wytanj@gmail.com =
+<mailto:wytanj@gmail.com> > wrote:
+
+CCing Brendan to handle
+
+=20
+
+On Wed, Dec 2, 2020 at 4:56 PM Joreen-M&P Int'l Freight Pte Ltd =
+<joreen.boo@sin-mp.com.sg <mailto:joreen.boo@sin-mp.com.sg> > wrote:
+
+Dear Jeremy
+
+=20
+
+As per your what=E2=80=99s app, we will arrange said shipment via sea.
+
+=20
+
+My agent details :-
+
+=20
+
+
+PIC -- Mr.FONG
+
+Super Nova Logistics=20
+
+=20
+
+tel <tel:+852> :+852 2765 8741   fax:+852 2120 7078
+Email: nova@supernova-logistics.com =
+<mailto:nova@supernova-logistics.com>=20
+
+Skype: supernovahk      QQ: 8-5991-4331                           =20
+
+=E5=BE=AE=E4=BF=A1: supernovahk    Whatsapp:+852 6688 5115
+
+=20
+
+=20
+
+Then enclosed shipper details from your end. :)=20
+
+=20
+
+Best & Warmest Regards,
+Joreen Boo / Assistant Sales Manager=20
+
+M&P International Freights Pte Ltd ( HP: +65 93851307 )=20
+
+=20
+
+From: Joreen-M&P Int'l Freight Pte Ltd [mailto:Joreen.boo@sin-mp.com.sg =
+<mailto:Joreen.boo@sin-mp.com.sg> ]=20
+Sent: Tuesday, December 01, 2020 17:51
+To: 'Jeremy Tan'
+Cc: 'Christina Ng - MPIF'
+Subject: RE: Quote for EXW HK LCL SEA=20
+
+=20
+
+Dear Jeremy,
+
+=20
+
+Good day. Append LCL quotation as below :-
+
+=20
+
+Estimated lump sum based on 32 cartons / 295.52 kg / 1.299 m3  @ USD =
+392.94 x 1.38 + SGD 681.87 =3D SGD 1224.13
+
+Subject to :-
+
+CARPARK FEE: AT COST
+
+SHIPPER'S WAREHOUSE GATE CHARGES:AT COST
+
+EXPORT DECLARATION FEE: CIF Value in HKD x 0.00025  (MIN: HKD15.-)
+
+EXPORT DECLARATION HANDLING  FEE: HKD100.-
+
+& also Singapore GST 7%=20
+
+=20
+
+=20
+
+BY LCL:
+
+OCEAN FREIGHT:  USD 20.00 / m3=20
+
+CFS : USD 40.00 /RT
+
+HANDLING: USD 65.00 /SET
+
+DOCUMENTATION FEE : USD 60.00 /SET
+
+PICK UP FEE: USD 0.25 /KGS  OR  USD 20.00 /CBM (MIN: USD 120.00 .-)
+
+CFS WAREHOUSE GATE CHARGE: USD 70.00 .-
+
+CARPARK FEE: AT COST
+
+SHIPPER'S WAREHOUSE GATE CHARGES:AT COST
+
+EXPORT DECLARATION FEE: CIF Value in HKD x 0.00025  (MIN: HKD15.-)
+
+EXPORT DECLARATION HANDLING  FEE: HKD100.-
+
+=20
+
+
+ Singapore Local Charges
+
+					=09
+
+LCL Charges
+
+=20
+
+SGD 18.00 w/m
+
+		=20
+
+
+THC
+
+=20
+
+SGD 9.00 w/m
+
+		=20
+
+
+PSA Wharfage
+
+=20
+
+SGD 1.75 w/m
+
+		=20
+
+
+Delivery Order Fee
+
+=20
+
+SGD 150.00 / set
+
+		=20
+
+
+Agency Fee
+
+=20
+
+SGD 60.00 / shipment
+
+		=20
+
+
+Import Permit
+
+=20
+
+SGD 40.00 / Set
+
+		=20
+
+
+Clearance Charges=20
+
+=20
+
+SGD 50.00 / shipment =20
+
+=20
+
+=20
+
+=20
+
+
+Singapore GST
+
+           At Cost  ( 7% of cargo's value)
+
+	=20
+
+
+Transportation
+
+=20
+
+SGD 90.00 / Trip or  SGD 9.50 / w/m
+
+(subject GST)
+
+=20
+
+
+Tailgate
+
+=20
+
+SGD 60.00 ( if required )
+
+=20
+
+=20
+
+
+Labour Cost
+
+=20
+
+SGD 70.00 ( if required )
+
+=20
+
+=20
+
+
+Import Processing Fee
+
+=20
+
+SGD 35.00 / shipment
+
+		=20
+
+
+Cargo Tracing Fee
+
+=20
+
+SGD 15.00 / Shipment
+
+		=20
+
+
+Forklift
+
+=20
+
+SGD 55.00 / 3 cbm
+
+=20
+
+	=20
+
+
+Warehouse Surcharges
+
+=20
+
+Waived
+
+		=20
+
+
+Admin Surcharges
+
+=20
+
+Waived
+
+=20
+
+=20
+
+=20
+
+
+FTZ Surcharges
+
+=20
+
+SGD 6.00 w/m
+
+=20
+
+=20
+
+=20
+
+										=09
+=20
+
+                             =20
+
+Exclude insurance coverage=20
+
+=20
+
+=20
+
+** above transport cost is to industrial / warehouse areas with proper =
+unloading facilities. Thanks !=20
+
+=20
+
+Awaits your kind confirmation and support. Thanks a lot.=20
+
+=20
+
+=20
+
+
+SINGAPORE
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+=E3=80=80
+
+
+=E3=80=80
+
+=E3=80=80
+
+CLOSING
+
+ETD
+
+ETA
+
+
+VESSEL
+
+VOY NO
+
+CFS
+
+CY
+
+HKG
+
+SIN
+
+
+KMTC JEBEL ALI
+
+2012S
+
+01/12
+
+02/12
+
+04/12
+
+07/12
+
+
+WAN HAI 501
+
+S208
+
+08/12
+
+09/12
+
+11/12
+
+14/12
+
+
+OOCL DALIAN
+
+S655
+
+15/12
+
+16/12
+
+18/12
+
+21/12
+
+
+WAN HAI 510
+
+S136
+
+22/12
+
+23/12
+
+25/12
+
+28/12
+
+=20
+
+=20
+
+Best & Warmest Regards,
+Joreen Boo / Assistant Sales Manager=20
+
+M&P International Freights Pte Ltd ( HP: +65 93851307 )=20
+
+Phone : 65 6221 2218 Ext 108  =20
+
+=20
+
+From: Joreen-M&P Int'l Freight Pte Ltd [mailto:Joreen.boo@sin-mp.com.sg =
+<mailto:Joreen.boo@sin-mp.com.sg> ]=20
+Sent: Tuesday, December 01, 2020 17:16
+To: 'Jeremy Tan'
+Cc: 'Christina Ng - MPIF'; 'contact@mecha.store'
+Subject: RE: Quote for EXW HK AIR
+
+=20
+
+Okay. shall check the sea & revert.=20
+
+Best & Warmest Regards,
+Joreen Boo / Assistant Sales Manager=20
+
+M&P International Freights Pte Ltd ( HP: +65 93851307 )=20
+
+Phone : 65 6221 2218 Ext 108  =20
+
+=20
+
+From: Jeremy Tan [mailto:wytanj@gmail.com <mailto:wytanj@gmail.com> ]=20
+Sent: Tuesday, December 01, 2020 17:12
+To: Joreen-M&P Int'l Freight Pte Ltd
+Cc: Christina Ng - MPIF; contact@mecha.store =
+<mailto:contact@mecha.store>=20
+Subject: Re: Quote for EXW HK AIR
+
+=20
+
+THanks, got Sea quote and timing?
+
+=20
+
+On Tue, Dec 1, 2020 at 5:08 PM Joreen-M&P Int'l Freight Pte Ltd =
+<joreen.boo@sin-mp.com.sg <mailto:joreen.boo@sin-mp.com.sg> > wrote:
+
+Dear Titan,
+
+=20
+
+Good day to you. Based on 300kg chargeable weigh ( later on when cargo =
+received by airline, will re-measure / re-weigh again ).
+
+=20
+
+=20
+
+Estimated lump sum @ USD 1755.00 x 1.38 + SGD 361.30 =3D SGD 2783.20
+
+=20
+
+=20
+
+AIR FREIGHT: USD 4.00 /KGS
+
+SECURITY SURCHARGE: USD 0.45 /KGS
+
+THC:  USD 0.35 /KGS (MIN: USD 15.00 .-)
+
+CFS: USD 0.20 /KGS (MIN: USD 30.00 .-)
+
+HANDLING: USD 65.00 /SET
+
+DOCUMENTATION FEE : USD 60.00 /SET
+
+BRIDGE TOLL FEE: USD 10.00 /SHIPMENT
+
+CARTAGE FEE: USD 0.25 /KGS  OR  USD 20.00 /CBM  (MIN: USD 120.00 .-)
+
+=20
+
+SHIPPER WAREHOUSE CHARGE: AT COST
+
+EXPORT DECLARATION FEE: CIF Value in HKD x 0.00025
+
+EXPORT DECLARATION HANDLING  FEE: HKD100.-
+
+=20
+
+Subject to local charges in Singapore
+
+agency fee - sgd 60
+
+import permit - sgd 40
+
+transportation - sgd 90 or sgd 0.30/kg
+
+terminal handling fee - sgd 50 or sgd 0.35/kg
+
+labour cost - sgd 60
+
+singapore gst - 7%
+
+=20
+
+Thank you.
+
+=20
+
+Best & Warmest Regards,
+Joreen Boo / Assistant Sales Manager=20
+
+M&P International Freights Pte Ltd ( HP: +65 93851307 )=20
+
+Phone : 65 6221 2218 Ext 108  =20
+
+=20
+
+From: Christina Ng - MPIF [mailto:cs@sin-mp.com.sg =
+<mailto:cs@sin-mp.com.sg> ]=20
+Sent: Tuesday, December 01, 2020 14:51
+To: 'Jeremy Tan'; 'Joreen-M&P Int'l Freight Pte Ltd'; =
+contact@mecha.store <mailto:contact@mecha.store>=20
+Subject: RE: Quote for EXW HK AIR
+
+=20
+
+Dear jeremy
+
+=20
+
+Shall check and revert.
+
+=20
+
+=20
+
+=20
+
+=20
+
+Best Regards,
+Christina Ng=20
+   =20
+
+M&P INTERNATIONAL FREIGHTS PTE LTD
+
+37 Jalan Pemimpin=20
+
+#04-10 and #04-12 (Warehouse)
+
+Mapex=20
+
+Singapore 577177=20
+
+=20
+
+* Phone : 65 6221 2218 ext 111
+
+* Mobile : 65 9002 0913
+
+* Fax : 65 6324 1629
+
+* Email : cs@sin-mp.com.sg <mailto:cs@sin-mp.com.sg>=20
+" Web : www.mp.com.sg <http://www.mp.com.sg/>=20
+
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=20
+
+<<All business is transacted only in accordance with SLA Standard =
+Trading Conditions (latest edition).>>=20
+
+**********************************************************************=20
+
+This message is confidential and intended solely for the use of the =
+named addressee(s).=20
+
+It may contain information that is covered or protected by legal, =
+professional or other privilege, work product immunity or other legal =
+rules. Any unauthorised use or dissemination of this message or any part =
+of it prohibited and liability (in negligence or otherwise) arising out =
+of any action, or forbearance, by a third party on information contained =
+in this message is hereby excluded. If you have received this =
+communication in error please notify us by return e-mail and then delete =
+this e-mail and any copies of it from your computer system. This e-mail =
+has been scanned for Viruses but it is your full responsibility for =
+Virus Checking.=20
+
+Thank you for your co-operation.
+
+=20
+
+From: Jeremy Tan [mailto:wytanj@gmail.com <mailto:wytanj@gmail.com> ]=20
+Sent: Tuesday, December 01, 2020 14:48
+To: Joreen-M&P Int'l Freight Pte Ltd <joreen.boo@sin-mp.com.sg =
+<mailto:joreen.boo@sin-mp.com.sg> >; contact@mecha.store =
+<mailto:contact@mecha.store> ; cs <cs@sin-mp.com.sg =
+<mailto:cs@sin-mp.com.sg> >
+Subject: Quote for EXW HK AIR
+
+=20
+
+Hi Joreen / Christina,
+
+=20
+
+Can quote?
+
+=20
+
+Thanks.
+
+
+------=_NextPart_001_02C7_01D6D494.9C5012B0
+Content-Type: text/html;
+	charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:v=3D"urn:schemas-microsoft-com:vml" =
+xmlns:o=3D"urn:schemas-microsoft-com:office:office" =
+xmlns:w=3D"urn:schemas-microsoft-com:office:word" =
+xmlns:m=3D"http://schemas.microsoft.com/office/2004/12/omml" =
+xmlns=3D"http://www.w3.org/TR/REC-html40"><head><meta =
+http-equiv=3DContent-Type content=3D"text/html; charset=3Dutf-8"><meta =
+name=3DGenerator content=3D"Microsoft Word 15 (filtered medium)"><!--[if =
+!mso]><style>v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+w\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style><![endif]--><style><!--
+/* Font Definitions */
+@font-face
+	{font-family:Wingdings;
+	panose-1:5 0 0 0 0 0 0 0 0 0;}
+@font-face
+	{font-family:SimSun;
+	panose-1:2 1 6 0 3 1 1 1 1 1;}
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Calibri;
+	panose-1:2 15 5 2 2 2 4 3 2 4;}
+@font-face
+	{font-family:Cambria;
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Tahoma;
+	panose-1:2 11 6 4 3 5 4 4 2 4;}
+@font-face
+	{font-family:Webdings;
+	panose-1:5 3 1 2 1 5 9 6 7 3;}
+@font-face
+	{font-family:"\@SimSun";
+	panose-1:2 1 6 0 3 1 1 1 1 1;}
+@font-face
+	{font-family:"Trebuchet MS";
+	panose-1:2 11 6 3 2 2 2 2 2 4;}
+@font-face
+	{font-family:"MV Boli";
+	panose-1:2 0 5 0 3 2 0 9 0 0;}
+@font-face
+	{font-family:"Segoe UI Symbol";
+	panose-1:2 11 5 2 4 2 4 2 2 3;}
+@font-face
+	{font-family:"Monotype Corsiva";
+	panose-1:3 1 1 1 1 2 1 1 1 1;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0in;
+	margin-bottom:.0001pt;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:blue;
+	text-decoration:underline;}
+a:visited, span.MsoHyperlinkFollowed
+	{mso-style-priority:99;
+	color:purple;
+	text-decoration:underline;}
+p
+	{mso-style-priority:99;
+	mso-margin-top-alt:auto;
+	margin-right:0in;
+	mso-margin-bottom-alt:auto;
+	margin-left:0in;
+	font-size:12.0pt;
+	font-family:"Times New Roman",serif;}
+p.MsoAcetate, li.MsoAcetate, div.MsoAcetate
+	{mso-style-priority:99;
+	mso-style-link:"Balloon Text Char";
+	margin:0in;
+	margin-bottom:.0001pt;
+	font-size:8.0pt;
+	font-family:"Tahoma",sans-serif;}
+span.BalloonTextChar
+	{mso-style-name:"Balloon Text Char";
+	mso-style-priority:99;
+	mso-style-link:"Balloon Text";
+	font-family:"Tahoma",sans-serif;}
+span.EmailStyle20
+	{mso-style-type:personal;
+	font-family:"Calibri",sans-serif;
+	color:#1F497D;}
+span.EmailStyle21
+	{mso-style-type:personal;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+span.EmailStyle22
+	{mso-style-type:personal-reply;
+	font-family:"Calibri",sans-serif;
+	color:windowtext;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:10.0pt;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+--></style><!--[if gte mso 9]><xml>
+<o:shapedefaults v:ext=3D"edit" spidmax=3D"1026" />
+</xml><![endif]--><!--[if gte mso 9]><xml>
+<o:shapelayout v:ext=3D"edit">
+<o:idmap v:ext=3D"edit" data=3D"1" />
+</o:shapelayout></xml><![endif]--></head><body lang=3DEN-US link=3Dblue =
+vlink=3Dpurple><div class=3DWordSection1><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Dear =
+Jeremy<o:p></o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Please note =
+that container unstuff already.<o:p></o:p></span></p><p =
+class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>We will =
+arrange for delivery tomorrow 18/12/2020<o:p></o:p></span></p><p =
+class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><div><p class=3DMsoNormal><span =
+style=3D'color:black'><o:p>&nbsp;</o:p></span></p><p =
+class=3DMsoNormal><span =
+style=3D'font-family:"Calibri",sans-serif;color:black'>Best =
+Regards,<br>Christina Ng</span><span style=3D'color:black'> =
+<br></span><span style=3D'color:#1F497D'><img width=3D249 height=3D122 =
+id=3D"_x0000_i1039" src=3D"cid:image001.jpg@01D6D494.9AC1AA80" =
+alt=3D"cid:image002.jpg@01CE3D19.73C39F80"></span><img width=3D137 =
+height=3D93 id=3D"_x0000_i1038" =
+src=3D"cid:image002.jpg@01D6D494.9AC1AA80" alt=3D"UKAS_9K_Color_ver =
+2015"><span lang=3DEN-SG>&nbsp; </span><img width=3D201 height=3D80 =
+id=3D"_x0000_i1037" src=3D"cid:image003.jpg@01D6D494.9AC1AA80" =
+alt=3D"QMS - SAC 2015 version"><span lang=3DEN-SG>&nbsp;</span><img =
+width=3D114 height=3D107 id=3D"_x0000_i1036" =
+src=3D"cid:image004.png@01D6D494.9AC1AA80" =
+alt=3D"cid:image004.png@01D55BF9.0BF6B6C0"><span =
+lang=3DEN-SG>&nbsp;</span><img width=3D224 height=3D153 =
+id=3D"_x0000_i1035" src=3D"cid:image005.png@01D6D494.9AC1AA80" =
+alt=3D"SLA Logo"><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>M&amp;P INTERNATIONAL =
+FREIGHTS PTE LTD</span></b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>37 Jalan Pemimpin =
+</span></b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>#04-10 and #04-12 =
+(Warehouse)</span></b><b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Cambria",serif;color:black'><o:p><=
+/o:p></span></b></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>Mapex </span></b><span =
+lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>Singapore 577177 =
+</span></b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'><o:p>&nbsp;<=
+/o:p></span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Phone</span><span lang=3DEN-GB style=3D'color:black'> </span><span =
+style=3D'color:black'>: 65 6221 2218 ext 111<o:p></o:p></span></p><p =
+class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+</span><span lang=3DEN-GB style=3D'color:black'>Mobile : 65 9002 =
+0913</span><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+</span><span style=3D'color:black'>Fax : 65 6324 1629</span><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>+</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Email : <a =
+href=3D"mailto:cs@sin-mp.com.sg">cs@sin-mp.com.sg</a></span><span =
+style=3D'color:black'><br></span><span lang=3DEN-GB =
+style=3D'font-size:13.5pt;font-family:Webdings;color:black'>&quot;</span>=
+<span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Web :&nbsp;</span><span style=3D'color:black'><a =
+href=3D"http://www.mp.com.sg/">www.mp.com.sg</a></span><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D </span><span =
+style=3D'font-size:10.0pt;color:black'><o:p></o:p></span></p><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>&lt;&lt;All business is =
+transacted only in accordance with SLA Standard Trading Conditions =
+(latest edition).&gt;&gt; </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>**********************************=
+************************************ </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>This message is confidential and =
+intended solely for the use of the named addressee(s). </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>It may contain information that =
+is covered or protected by legal, professional or other privilege, work =
+product immunity or other legal rules. Any unauthorised use or =
+dissemination of this message or any part of it prohibited and liability =
+(in negligence or otherwise) arising out of any action, or forbearance, =
+by a third party on information contained in this message is hereby =
+excluded. If you have received this communication in error please notify =
+us by return e-mail and then delete this e-mail and any copies of it =
+from your computer system. This e-mail has been scanned for Viruses but =
+it is your full responsibility for Virus Checking. </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>Thank you for your =
+co-operation.</span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p></div><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><div><div style=3D'border:none;border-top:solid #E1E1E1 =
+1.0pt;padding:3.0pt 0in 0in 0in'><p class=3DMsoNormal><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>From:</span><=
+/b><span style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'> =
+Christina Ng - MPIF [mailto:cs@sin-mp.com.sg] <br><b>Sent:</b> Monday, =
+December 14, 2020 09:58<br><b>To:</b> 'Jeremy Tan' =
+&lt;wytanj@gmail.com&gt;<br><b>Cc:</b> 'Joreen-M&amp;P Int'l Freight Pte =
+Ltd' &lt;joreen.boo@sin-mp.com.sg&gt;; 'Brendan De Souza (Mecha)' =
+&lt;bdsm@mecha.store&gt;<br><b>Subject:</b> RE: Quote for EXW HK LCL =
+SEA<o:p></o:p></span></p></div></div><p =
+class=3DMsoNormal><o:p>&nbsp;</o:p></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Dear =
+Jeremy<o:p></o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Please note =
+as per carrier, vesl ETA SIN 16/12/2020.<o:p></o:p></span></p><p =
+class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Will update =
+on the delivery status once available.<o:p></o:p></span></p><p =
+class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><div><p class=3DMsoNormal><span =
+style=3D'color:black'><o:p>&nbsp;</o:p></span></p><p =
+class=3DMsoNormal><span =
+style=3D'font-family:"Calibri",sans-serif;color:black'>Best =
+Regards,<br>Christina Ng</span><span style=3D'color:black'> =
+<br></span><span style=3D'color:#1F497D'><img border=3D0 width=3D249 =
+height=3D122 id=3D"Picture_x0020_1" =
+src=3D"cid:image001.jpg@01D6D494.9AC1AA80" =
+alt=3D"cid:image002.jpg@01CE3D19.73C39F80"></span><img border=3D0 =
+width=3D137 height=3D93 id=3D"Picture_x0020_3" =
+src=3D"cid:image002.jpg@01D6D494.9AC1AA80" alt=3D"UKAS_9K_Color_ver =
+2015"><span lang=3DEN-SG>&nbsp; </span><img border=3D0 width=3D201 =
+height=3D80 id=3D"Picture_x0020_4" =
+src=3D"cid:image003.jpg@01D6D494.9AC1AA80" alt=3D"QMS - SAC 2015 =
+version"><span lang=3DEN-SG>&nbsp;</span><img border=3D0 width=3D114 =
+height=3D107 id=3D"Picture_x0020_2" =
+src=3D"cid:image004.png@01D6D494.9AC1AA80" =
+alt=3D"cid:image004.png@01D55BF9.0BF6B6C0"><span =
+lang=3DEN-SG>&nbsp;</span><img border=3D0 width=3D224 height=3D153 =
+id=3D"Picture_x0020_5" src=3D"cid:image005.png@01D6D494.9AC1AA80" =
+alt=3D"SLA Logo"><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>M&amp;P INTERNATIONAL =
+FREIGHTS PTE LTD</span></b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>37 Jalan Pemimpin =
+</span></b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>#04-10 and #04-12 =
+(Warehouse)</span></b><b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Cambria",serif;color:black'><o:p><=
+/o:p></span></b></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>Mapex </span></b><span =
+lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>Singapore 577177 =
+</span></b><span lang=3DEN-SG =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p></o:p></=
+span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'><o:p>&nbsp;<=
+/o:p></span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Phone</span><span lang=3DEN-GB style=3D'color:black'> </span><span =
+style=3D'color:black'>: 65 6221 2218 ext 111<o:p></o:p></span></p><p =
+class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+</span><span lang=3DEN-GB style=3D'color:black'>Mobile : 65 9002 =
+0913</span><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+</span><span style=3D'color:black'>Fax : 65 6324 1629</span><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>+</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Email : <a =
+href=3D"mailto:cs@sin-mp.com.sg">cs@sin-mp.com.sg</a></span><span =
+style=3D'color:black'><br></span><span lang=3DEN-GB =
+style=3D'font-size:13.5pt;font-family:Webdings;color:black'>&quot;</span>=
+<span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Web :&nbsp;</span><span style=3D'color:black'><a =
+href=3D"http://www.mp.com.sg/">www.mp.com.sg</a></span><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D <o:p></o:p></span></p><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>&lt;&lt;All business is =
+transacted only in accordance with SLA Standard Trading Conditions =
+(latest edition).&gt;&gt; </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>**********************************=
+************************************ </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>This message is confidential and =
+intended solely for the use of the named addressee(s). </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>It may contain information that =
+is covered or protected by legal, professional or other privilege, work =
+product immunity or other legal rules. Any unauthorised use or =
+dissemination of this message or any part of it prohibited and liability =
+(in negligence or otherwise) arising out of any action, or forbearance, =
+by a third party on information contained in this message is hereby =
+excluded. If you have received this communication in error please notify =
+us by return e-mail and then delete this e-mail and any copies of it =
+from your computer system. This e-mail has been scanned for Viruses but =
+it is your full responsibility for Virus Checking. </span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:10.0pt;color:black'>Thank you for your =
+co-operation.</span><span =
+style=3D'font-size:10.0pt;font-family:"Calibri",sans-serif;color:black'><=
+o:p></o:p></span></p></div><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'><o:p>&nbsp;</=
+o:p></span></p><div><div style=3D'border:none;border-top:solid #E1E1E1 =
+1.0pt;padding:3.0pt 0in 0in 0in'><p class=3DMsoNormal><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>From:</span><=
+/b><span style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'> =
+Joreen-M&amp;P Int'l Freight Pte Ltd [<a =
+href=3D"mailto:joreen.boo@sin-mp.com.sg">mailto:joreen.boo@sin-mp.com.sg<=
+/a>] <br><b>Sent:</b> Monday, December 07, 2020 12:48<br><b>To:</b> =
+'Brendan De Souza (Mecha)' &lt;<a =
+href=3D"mailto:bdsm@mecha.store">bdsm@mecha.store</a>&gt;<br><b>Cc:</b> =
+'Jeremy Tan' &lt;<a =
+href=3D"mailto:wytanj@gmail.com">wytanj@gmail.com</a>&gt;; 'Christina Ng =
+- MPIF' &lt;<a =
+href=3D"mailto:cs@sin-mp.com.sg">cs@sin-mp.com.sg</a>&gt;<br><b>Subject:<=
+/b> RE: Quote for EXW HK LCL SEA<o:p></o:p></span></p></div></div><p =
+class=3DMsoNormal><o:p>&nbsp;</o:p></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>You are most welcome<o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>Bes=
+t &amp; Warmest Regards,<br>Joreen Boo / Assistant Sales Manager =
+<o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>M&a=
+mp;P International Freights Pte Ltd ( HP: +65 93851307 ) =
+<o:p></o:p></span></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DEN-GB =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>P=
+hone </span></b><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>:=
+ 65 6221 2218 Ext 108</span></b><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>&nb=
+sp;&nbsp; <o:p></o:p></span></p><p class=3DMsoNormal><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+><o:p>&nbsp;</o:p></span></p><p class=3DMsoNormal><b><span =
+style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'>From:</span></=
+b><span style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'> =
+Brendan De Souza (Mecha) [<a =
+href=3D"mailto:bdsm@mecha.store">mailto:bdsm@mecha.store</a>] =
+<br><b>Sent:</b> Monday, December 07, 2020 12:46<br><b>To:</b> =
+Joreen-M&amp;P Int'l Freight Pte Ltd<br><b>Cc:</b> Jeremy Tan; Christina =
+Ng - MPIF<br><b>Subject:</b> Re: Quote for EXW HK LCL =
+SEA<o:p></o:p></span></p><p =
+class=3DMsoNormal><o:p>&nbsp;</o:p></p><div><p class=3DMsoNormal>Good =
+day Joreen<o:p></o:p></p><div><p =
+class=3DMsoNormal><o:p>&nbsp;</o:p></p></div><div><p =
+class=3DMsoNormal>Thanks for your work<o:p></o:p></p></div><div><p =
+class=3DMsoNormal><o:p>&nbsp;</o:p></p></div><div><p =
+class=3DMsoNormal><span style=3D'font-family:"Segoe UI =
+Symbol",sans-serif'>&#128516;=E2=AD=90</span><o:p></o:p></p></div></div><=
+p class=3DMsoNormal><o:p>&nbsp;</o:p></p><div><div><p =
+class=3DMsoNormal>On Mon, 7 Dec 2020, 12:45 pm Joreen-M&amp;P Int'l =
+Freight Pte Ltd, &lt;<a =
+href=3D"mailto:joreen.boo@sin-mp.com.sg">joreen.boo@sin-mp.com.sg</a>&gt;=
+ wrote:<o:p></o:p></p></div><blockquote =
+style=3D'border:none;border-left:solid #CCCCCC 1.0pt;padding:0in 0in 0in =
+6.0pt;margin-left:4.8pt;margin-top:5.0pt;margin-right:0in;margin-bottom:5=
+.0pt'><div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>Dear Brendan,</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>Good day to you. as per HKG&nbsp; side revert =
+:-</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-family:"Tahoma",sans-serif'>Dear =
+Joreen,</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-family:"Tahoma",sans-serif'>We had already collected the =
+cargo and we will arrange to onboard below sailing =
+schedule:</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-family:"Tahoma",sans-serif'>&nbsp;</span><o:p></o:p></p><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>HONGKONG =
+BRIDGE V.0055S<o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>ETD: 10 DEC =
+2020<br>ETA: 15 DEC 2020<o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>Bes=
+t &amp; Warmest Regards,<br>Joreen Boo / Assistant Sales Manager =
+</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>M&a=
+mp;P International Freights Pte Ltd ( HP: +65 93851307 ) =
+</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DEN-GB =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>P=
+hone </span></b><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>:=
+ 65 6221 2218 Ext 108</span></b><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>&nb=
+sp;&nbsp; </span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'>From:</span></=
+b><span style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'> =
+Brendan De Souza (Mecha) [mailto:<a href=3D"mailto:bdsm@mecha.store" =
+target=3D"_blank">bdsm@mecha.store</a>] <br><b>Sent:</b> Friday, =
+December 04, 2020 17:44<br><b>To:</b> Joreen Boo<br><b>Cc:</b> Jeremy =
+Tan; Christina Ng - MPIF<br><b>Subject:</b> Re: Quote for EXW HK LCL =
+SEA</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>Thanks&nbsp;=
+Joreen<o:p></o:p></p></div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p><div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>On Fri, 4 =
+Dec 2020, 9:55 am Joreen Boo, &lt;<a =
+href=3D"mailto:joreen.boo@sin-mp.com.sg" =
+target=3D"_blank">joreen.boo@sin-mp.com.sg</a>&gt; =
+wrote:<o:p></o:p></p></div><blockquote =
+style=3D'border:none;border-left:solid #CCCCCC 1.0pt;padding:0in 0in 0in =
+6.0pt;margin-left:4.8pt;margin-top:5.0pt;margin-right:0in;margin-bottom:5=
+.0pt'><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>Dear =
+All<o:p></o:p></p><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p></div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>Good =
+morning. As per hkg side revert,&nbsp;<o:p></o:p></p></div><div><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p></div><div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>we had =
+already reached to the shipper and they will fill in the booking form to =
+us by today.&nbsp;<o:p></o:p></p></div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p></div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>we will =
+keep you posted on it.&nbsp;<o:p></o:p></p></div><div><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p></div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>Thanks.&nbsp=
+;<o:p></o:p></p></div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>Joreen =
+Boo<br>M&amp;P International Freights Pte Ltd<br>+65 9385 1307 =
+<o:p></o:p></p></div></div></div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p><div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>On Thu, 3 =
+Dec 2020, 11:12 Jeremy Tan, &lt;<a href=3D"mailto:wytanj@gmail.com" =
+target=3D"_blank">wytanj@gmail.com</a>&gt; =
+wrote:<o:p></o:p></p></div><blockquote =
+style=3D'border:none;border-left:solid #CCCCCC 1.0pt;padding:0in 0in 0in =
+6.0pt;margin-left:4.8pt;margin-top:5.0pt;margin-right:0in;margin-bottom:5=
+.0pt'><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>CCing =
+Brendan to handle<o:p></o:p></p></div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p><div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>On Wed, Dec =
+2, 2020 at 4:56 PM Joreen-M&amp;P Int'l Freight Pte Ltd &lt;<a =
+href=3D"mailto:joreen.boo@sin-mp.com.sg" =
+target=3D"_blank">joreen.boo@sin-mp.com.sg</a>&gt; =
+wrote:<o:p></o:p></p></div><blockquote =
+style=3D'border:none;border-left:solid #CCCCCC 1.0pt;padding:0in 0in 0in =
+6.0pt;margin-left:4.8pt;margin-top:5.0pt;margin-right:0in;margin-bottom:5=
+.0pt'><div><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>Dear Jeremy</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>As per your what=E2=80=99s app, we will arrange said shipment via =
+sea.</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>My agent details :-</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p =
+style=3D'margin:0in;margin-bottom:.0001pt'><span =
+style=3D'font-family:"Monotype =
+Corsiva";color:#1F497D'><br></span><b><span style=3D'font-family:"MV =
+Boli";color:#003399'>PIC -- Mr.FONG</span></b><o:p></o:p></p><p =
+style=3D'margin:0in;margin-bottom:.0001pt'><b><span =
+style=3D'font-family:"MV Boli";color:#003399'>Super Nova Logistics =
+</span></b><o:p></o:p></p><p =
+style=3D'margin:0in;margin-bottom:.0001pt'><b><span =
+style=3D'font-family:"Trebuchet =
+MS",sans-serif;color:blue'>&nbsp;</span></b><o:p></o:p></p><p =
+style=3D'margin:0in;margin-bottom:.0001pt'><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#002060;border:solid =
+windowtext 1.0pt;padding:0in'><a href=3D"tel:+852">tel<span =
+style=3D'border:none windowtext =
+1.0pt;padding:0in'>:+852</span></a></span><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#002060'> 2765 8741 =
+&nbsp;&nbsp;<span style=3D'border:solid windowtext =
+1.0pt;padding:0in'>fax</span>:+852 2120 7078<br>Email: <a =
+href=3D"mailto:nova@supernova-logistics.com" =
+target=3D"_blank">nova@supernova-logistics.com</a></span><o:p></o:p></p><=
+p style=3D'margin:0in;margin-bottom:.0001pt'><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#002060'>Skype: =
+supernovahk &nbsp; &nbsp;&nbsp; QQ: =
+8-5991-4331&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp; </span><o:p></o:p></p><p =
+style=3D'margin:0in;margin-bottom:.0001pt'><span lang=3DZH-CN =
+style=3D'font-family:SimSun;color:#0B0396'>=E5=BE=AE=E4=BF=A1</span><span=
+ style=3D'font-family:"Tahoma",sans-serif;color:#0B0396'>: supernovahk =
+&nbsp;&nbsp; Whatsapp:+852 6688 5115</span><o:p></o:p></p><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>Then enclosed shipper details from your end. </span><span =
+style=3D'font-size:11.0pt;font-family:Wingdings;color:#1F497D'>J</span><s=
+pan =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+> </span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>Bes=
+t &amp; Warmest Regards,<br>Joreen Boo / Assistant Sales Manager =
+</span><o:p></o:p></p><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>M&a=
+mp;P International Freights Pte Ltd ( HP: +65 93851307 ) =
+</span><o:p></o:p></p></div><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><div><div =
+style=3D'border:none;border-top:solid #B5C4DF 1.0pt;padding:3.0pt 0in =
+0in 0in'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'>From:</span></=
+b><span style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'> =
+Joreen-M&amp;P Int'l Freight Pte Ltd [mailto:<a =
+href=3D"mailto:Joreen.boo@sin-mp.com.sg" =
+target=3D"_blank">Joreen.boo@sin-mp.com.sg</a>] <br><b>Sent:</b> =
+Tuesday, December 01, 2020 17:51<br><b>To:</b> 'Jeremy =
+Tan'<br><b>Cc:</b> 'Christina Ng - MPIF'<br><b>Subject:</b> RE: Quote =
+for EXW HK LCL SEA </span><o:p></o:p></p></div></div><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'>&nbsp;<o:p><=
+/o:p></p><p><span style=3D'font-family:"Tahoma",sans-serif'>Dear =
+Jeremy,</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif'>&nbsp;</span><o:p></o:p></p><p>=
+<span style=3D'font-family:"Tahoma",sans-serif'>Good day. Append LCL =
+quotation as below :-</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif'>&nbsp;</span><o:p></o:p></p><p>=
+<span style=3D'color:#002060'>Estimated lump sum based on 32 cartons / =
+295.52 kg / 1.299 m3 &nbsp;@ USD 392.94 x 1.38 + SGD 681.87 =3D SGD =
+1224.13</span><o:p></o:p></p><p><span style=3D'color:#002060'>Subject to =
+:-</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>CARPARK FEE: AT =
+COST</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>SHIPPER'S =
+WAREHOUSE GATE CHARGES:AT COST</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>EXPORT =
+DECLARATION FEE: CIF Value in HKD x 0.00025&nbsp; (MIN: =
+HKD15.-)</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>EXPORT =
+DECLARATION HANDLING &nbsp;FEE: HKD100.-</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&amp; also Singapore GST 7% =
+</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif'>&nbsp;</span><o:p></o:p></p><p>=
+<b><span style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>BY =
+LCL:</span></b><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>OCEAN =
+FREIGHT:&nbsp; USD 20.00 / m3 </span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>CFS : USD 40.00 =
+/RT</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>HANDLING: USD =
+65.00 /SET</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>DOCUMENTATION =
+FEE : USD 60.00 /SET</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>PICK UP FEE: USD =
+0.25 /KGS&nbsp; OR&nbsp; USD 20.00 /CBM (MIN: USD 120.00 =
+.-)</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>CFS WAREHOUSE =
+GATE CHARGE: USD 70.00 .-</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>CARPARK FEE: AT =
+COST</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>SHIPPER'S =
+WAREHOUSE GATE CHARGES:AT COST</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>EXPORT =
+DECLARATION FEE: CIF Value in HKD x 0.00025&nbsp; (MIN: =
+HKD15.-)</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif;color:#2D4FC9'>EXPORT =
+DECLARATION HANDLING &nbsp;FEE: HKD100.-</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><table =
+class=3DMsoNormalTable border=3D0 cellspacing=3D0 cellpadding=3D0 =
+width=3D0 style=3D'width:623.2pt;border-collapse:collapse'><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;<b><u>Singapore Local =
+Charges</u></b></span><o:p></o:p></p></td><td width=3D101 nowrap =
+colspan=3D2 valign=3Dbottom style=3D'width:76.1pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D42 nowrap valign=3Dbottom =
+style=3D'width:31.2pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D100 nowrap colspan=3D2 =
+valign=3Dbottom style=3D'width:75.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D122 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:91.4pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D60 nowrap valign=3Dbottom =
+style=3D'width:45.25pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D2 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td></tr><tr style=3D'height:15.0pt'><td =
+width=3D243 nowrap valign=3Dbottom style=3D'width:182.25pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>LCL Charges</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 18.00 w/m</span><o:p></o:p></p></td><td =
+width=3D60 nowrap valign=3Dbottom style=3D'width:45.25pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>THC</span><o:p></o:p></p></td><td width=3D42 =
+nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 9.00 w/m</span><o:p></o:p></p></td><td =
+width=3D60 nowrap valign=3Dbottom style=3D'width:45.25pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>PSA Wharfage</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 1.75 w/m</span><o:p></o:p></p></td><td =
+width=3D60 nowrap valign=3Dbottom style=3D'width:45.25pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Delivery Order Fee</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 150.00 / set</span><o:p></o:p></p></td><td =
+width=3D60 nowrap valign=3Dbottom style=3D'width:45.25pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Agency Fee</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 60.00 / =
+shipment</span><o:p></o:p></p></td><td width=3D60 nowrap valign=3Dbottom =
+style=3D'width:45.25pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Import Permit</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 40.00 / Set</span><o:p></o:p></p></td><td =
+width=3D60 nowrap valign=3Dbottom style=3D'width:45.25pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Clearance Charges </span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D222 =
+nowrap colspan=3D5 valign=3Dbottom style=3D'width:166.7pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 50.00 / shipment =
+&nbsp;</span><o:p></o:p></p></td><td width=3D60 nowrap valign=3Dbottom =
+style=3D'width:45.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D163 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:122.0pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Singapore GST</span><o:p></o:p></p></td><td =
+width=3D324 nowrap colspan=3D7 valign=3Dbottom =
+style=3D'width:243.15pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'color:#002060'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp; </span><span style=3D'color:#C00000'>At Cost&nbsp; ( 7% of =
+cargo's value)</span></b><o:p></o:p></p></td><td width=3D163 nowrap =
+colspan=3D3 valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Transportation</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D283 =
+nowrap colspan=3D6 valign=3Dbottom style=3D'width:211.95pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 90.00 / Trip or&nbsp; SGD 9.50 / =
+w/m</span><o:p></o:p></p></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>(subject GST)</span><o:p></o:p></p></td><td =
+width=3D101 style=3D'width:75.8pt;padding:0in 0in 0in =
+0in;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Tailgate</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D283 =
+nowrap colspan=3D6 valign=3Dbottom style=3D'width:211.95pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 60.00 ( if required =
+)</span><o:p></o:p></p></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Labour Cost</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D283 =
+nowrap colspan=3D6 valign=3Dbottom style=3D'width:211.95pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 70.00 ( if required =
+)</span><o:p></o:p></p></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Import Processing =
+Fee</span><o:p></o:p></p></td><td width=3D42 nowrap valign=3Dbottom =
+style=3D'width:31.2pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D191 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:143.3pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 35.00 / =
+shipment</span><o:p></o:p></p></td><td width=3D92 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:68.65pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Cargo Tracing Fee</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D191 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:143.3pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 15.00 / =
+Shipment</span><o:p></o:p></p></td><td width=3D92 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:68.65pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Forklift</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D191 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:143.3pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 55.00 / 3 cbm</span><o:p></o:p></p></td><td =
+width=3D92 nowrap colspan=3D3 valign=3Dbottom =
+style=3D'width:68.65pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D163 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:122.0pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Warehouse =
+Surcharges</span><o:p></o:p></p></td><td width=3D42 nowrap =
+valign=3Dbottom style=3D'width:31.2pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'color:#002060'>&nbsp;</span></b><o:p></o:p></p></td><td =
+width=3D191 nowrap colspan=3D3 valign=3Dbottom =
+style=3D'width:143.3pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Waived</span><o:p></o:p></p></td><td width=3D92 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:68.65pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'></td><td width=3D163 nowrap colspan=3D3 =
+valign=3Dbottom style=3D'width:122.0pt;padding:0in 5.4pt 0in =
+5.4pt;height:15.0pt'></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Admin Surcharges</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'color:#002060'>&nbsp;</span></b><o:p></o:p></p></td><td =
+width=3D191 nowrap colspan=3D3 valign=3Dbottom =
+style=3D'width:143.3pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>Waived</span><o:p></o:p></p></td><td width=3D92 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:68.65pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D163 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:122.0pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr =
+style=3D'height:15.0pt'><td width=3D243 nowrap valign=3Dbottom =
+style=3D'width:182.25pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>FTZ Surcharges</span><o:p></o:p></p></td><td =
+width=3D42 nowrap valign=3Dbottom style=3D'width:31.2pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'color:#002060'>&nbsp;</span></b><o:p></o:p></p></td><td =
+width=3D191 nowrap colspan=3D3 valign=3Dbottom =
+style=3D'width:143.3pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>SGD 6.00 w/m</span><o:p></o:p></p></td><td =
+width=3D92 nowrap colspan=3D3 valign=3Dbottom =
+style=3D'width:68.65pt;padding:0in 5.4pt 0in 5.4pt;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D163 =
+nowrap colspan=3D3 valign=3Dbottom style=3D'width:122.0pt;padding:0in =
+5.4pt 0in 5.4pt;height:15.0pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td><td width=3D101 =
+style=3D'width:75.8pt;padding:0in 0in 0in 0in;height:15.0pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr><tr><td =
+width=3D243 style=3D'width:182.25pt;padding:0in 0in 0in 0in'></td><td =
+width=3D42 style=3D'width:31.2pt;padding:0in 0in 0in 0in'></td><td =
+width=3D60 style=3D'width:44.9pt;padding:0in 0in 0in 0in'></td><td =
+width=3D42 style=3D'width:31.2pt;padding:0in 0in 0in 0in'></td><td =
+width=3D90 style=3D'width:67.2pt;padding:0in 0in 0in 0in'></td><td =
+width=3D10 style=3D'width:7.8pt;padding:0in 0in 0in 0in'></td><td =
+width=3D21 style=3D'width:15.6pt;padding:0in 0in 0in 0in'></td><td =
+width=3D60 style=3D'width:45.25pt;padding:0in 0in 0in 0in'></td><td =
+width=3D41 style=3D'width:30.55pt;padding:0in 0in 0in 0in'></td><td =
+width=3D60 style=3D'width:45.25pt;padding:0in 0in 0in 0in'></td><td =
+width=3D62 style=3D'width:46.2pt;padding:0in 0in 0in 0in'></td><td =
+width=3D101 style=3D'width:75.8pt;padding:0in 0in 0in 0in'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p></td></tr></table><p>=
+<span style=3D'color:#002060'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; =
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; =
+</span><o:p></o:p></p><p><span style=3D'color:#002060'>Exclude insurance =
+coverage </span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>** above transport cost is to industrial / =
+warehouse areas with proper unloading facilities. Thanks ! =
+</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>Awaits your kind confirmation and support. =
+Thanks a lot.&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Tahoma",sans-serif'>&nbsp;</span><o:p></o:p></p><p>=
+<span =
+style=3D'font-family:"Tahoma",sans-serif'>&nbsp;</span><o:p></o:p></p><ta=
+ble class=3DMsoNormalTable border=3D0 cellspacing=3D0 cellpadding=3D0 =
+width=3D0 style=3D'width:630.4pt'><tr style=3D'height:34.9pt'><td =
+width=3D333 nowrap valign=3Dbottom =
+style=3D'width:3.45in;border-top:solid windowtext =
+1.0pt;border-left:solid windowtext =
+1.0pt;border-bottom:none;border-right:none;background:yellow;padding:0in =
+1.4pt 0in 1.4pt;height:34.9pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>SINGAPORE</span></b><o:p></o:p><=
+/p></td><td width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;border:none;border-top:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:34.9pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;border:none;border-top:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:34.9pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;border:none;border-top:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:34.9pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;border:none;border-top:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:34.9pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;border:none;border-top:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:34.9pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td></tr=
+><tr style=3D'height:3.2pt'><td width=3D333 nowrap valign=3Dbottom =
+style=3D'width:3.45in;border-top:none;border-left:solid windowtext =
+1.0pt;border-bottom:solid windowtext =
+1.0pt;border-right:none;background:yellow;padding:0in 1.4pt 0in =
+1.4pt;height:3.2pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-line-heig=
+ht-alt:3.2pt'><b><span lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;border:none;border-bottom:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:3.2pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-line-heig=
+ht-alt:3.2pt'><b><span lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;border:none;border-bottom:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:3.2pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-line-heig=
+ht-alt:3.2pt'><b><span lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;border:none;border-bottom:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:3.2pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-line-heig=
+ht-alt:3.2pt'><b><span lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;border:none;border-bottom:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:3.2pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-line-heig=
+ht-alt:3.2pt'><b><span lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td><td =
+width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;border:none;border-bottom:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:3.2pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-line-heig=
+ht-alt:3.2pt'><b><span lang=3DZH-CN =
+style=3D'font-family:SimSun'>=E3=80=80</span></b><o:p></o:p></p></td></tr=
+><tr style=3D'height:25.15pt'><td width=3D333 nowrap valign=3Dbottom =
+style=3D'width:3.45in;border:none;border-left:solid windowtext =
+1.0pt;background:yellow;padding:0in 1.4pt 0in 1.4pt;height:25.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun;color:blue'>=E3=80=80</span></b><o:p></o:p></=
+p></td><td width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;background:yellow;padding:0in 1.4pt 0in =
+1.4pt;height:25.15pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+lang=3DZH-CN =
+style=3D'font-family:SimSun;color:blue'>=E3=80=80</span></b><o:p></o:p></=
+p></td><td width=3D174 nowrap colspan=3D2 valign=3Dbottom =
+style=3D'width:130.8pt;background:yellow;padding:0in 1.4pt 0in =
+1.4pt;height:25.15pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>CLOSING</span></b><o:=
+p></o:p></p></td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;background:yellow;padding:0in 1.4pt 0in =
+1.4pt;height:25.15pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>ETD</span></b><o:p></=
+o:p></p></td><td width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;background:yellow;padding:0in 1.4pt 0in =
+1.4pt;height:25.15pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>ETA</span></b><o:p></=
+o:p></p></td></tr><tr style=3D'height:22.15pt'><td width=3D333 nowrap =
+valign=3Dbottom style=3D'width:3.45in;border:none;border-left:solid =
+windowtext 1.0pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>VESSEL</span></b><o:p=
+></o:p></p></td><td width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>VOY =
+NO</span></b><o:p></o:p></p></td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>CFS</span></b><o:p></=
+o:p></p></td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>CY</span></b><o:p></o=
+:p></p></td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>HKG</span></b><o:p></=
+o:p></p></td><td width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:blue'>SIN</span></b><o:p></=
+o:p></p></td></tr><tr style=3D'height:22.15pt'><td width=3D333 nowrap =
+valign=3Dbottom style=3D'width:3.45in;border:none;border-left:solid =
+windowtext 1.0pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:#1F497D'>KMTC JEBEL =
+ALI</span></b><o:p></o:p></p></td><td width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif;color:#1F497D'>2012S</span></b><o=
+:p></o:p></p></td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>01/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>02/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>04/12</span></b><o:p></o:p></p><=
+/td><td width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>07/12</span></b><o:p></o:p></p><=
+/td></tr><tr style=3D'height:22.15pt'><td width=3D333 nowrap =
+valign=3Dbottom style=3D'width:3.45in;border:none;border-left:solid =
+windowtext 1.0pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>WAN HAI =
+501</span></b><o:p></o:p></p></td><td width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>S208</span></b><o:p></o:p></p></=
+td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>08/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>09/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>11/12</span></b><o:p></o:p></p><=
+/td><td width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>14/12</span></b><o:p></o:p></p><=
+/td></tr><tr style=3D'height:22.15pt'><td width=3D333 nowrap =
+valign=3Dbottom style=3D'width:3.45in;border:none;border-left:solid =
+windowtext 1.0pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>OOCL =
+DALIAN</span></b><o:p></o:p></p></td><td width=3D135 nowrap =
+valign=3Dbottom style=3D'width:101.4pt;padding:0in 1.4pt 0in =
+1.4pt;height:22.15pt'><p class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>S655</span></b><o:p></o:p></p></=
+td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>15/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>16/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>18/12</span></b><o:p></o:p></p><=
+/td><td width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>21/12</span></b><o:p></o:p></p><=
+/td></tr><tr style=3D'height:22.15pt'><td width=3D333 nowrap =
+valign=3Dbottom style=3D'width:3.45in;border:none;border-left:solid =
+windowtext 1.0pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>WAN HAI =
+510</span></b><o:p></o:p></p></td><td width=3D135 nowrap valign=3Dbottom =
+style=3D'width:101.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>S136</span></b><o:p></o:p></p></=
+td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>22/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>23/12</span></b><o:p></o:p></p><=
+/td><td width=3D87 nowrap valign=3Dbottom =
+style=3D'width:65.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>25/12</span></b><o:p></o:p></p><=
+/td><td width=3D113 nowrap valign=3Dbottom =
+style=3D'width:84.4pt;padding:0in 1.4pt 0in 1.4pt;height:22.15pt'><p =
+class=3DMsoNormal =
+style=3D'mso-margin-top-alt:auto;mso-margin-bottom-alt:auto'><b><span =
+style=3D'font-family:"Arial",sans-serif'>28/12</span></b><o:p></o:p></p><=
+/td></tr></table><p><span =
+style=3D'font-family:"Calibri",sans-serif;color:#1F497D'>&nbsp;</span><o:=
+p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><div><p><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>Bes=
+t &amp; Warmest Regards,<br>Joreen Boo / Assistant Sales Manager =
+</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>M&a=
+mp;P International Freights Pte Ltd ( HP: +65 93851307 ) =
+</span><o:p></o:p></p><p><b><span lang=3DEN-GB =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>P=
+hone </span></b><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>:=
+ 65 6221 2218 Ext 108</span></b><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>&nb=
+sp;&nbsp; </span><o:p></o:p></p></div><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><div><div =
+style=3D'border:none;border-top:solid #B5C4DF 1.0pt;padding:3.0pt 0in =
+0in 0in'><p><b><span =
+style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'>From:</span></=
+b><span style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'> =
+Joreen-M&amp;P Int'l Freight Pte Ltd [mailto:<a =
+href=3D"mailto:Joreen.boo@sin-mp.com.sg" =
+target=3D"_blank">Joreen.boo@sin-mp.com.sg</a>] <br><b>Sent:</b> =
+Tuesday, December 01, 2020 17:16<br><b>To:</b> 'Jeremy =
+Tan'<br><b>Cc:</b> 'Christina Ng - MPIF'; =
+'contact@mecha.store'<br><b>Subject:</b> RE: Quote for EXW HK =
+AIR</span><o:p></o:p></p></div></div><p>&nbsp;<o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>Okay. shall check the sea &amp; revert. </span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>Bes=
+t &amp; Warmest Regards,<br>Joreen Boo / Assistant Sales Manager =
+</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>M&a=
+mp;P International Freights Pte Ltd ( HP: +65 93851307 ) =
+</span><o:p></o:p></p><p><b><span lang=3DEN-GB =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>P=
+hone </span></b><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>:=
+ 65 6221 2218 Ext 108</span></b><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>&nb=
+sp;&nbsp; </span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><p><b><span =
+style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'>From:</span></=
+b><span style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'> =
+Jeremy Tan [mailto:<a href=3D"mailto:wytanj@gmail.com" =
+target=3D"_blank">wytanj@gmail.com</a>] <br><b>Sent:</b> Tuesday, =
+December 01, 2020 17:12<br><b>To:</b> Joreen-M&amp;P Int'l Freight Pte =
+Ltd<br><b>Cc:</b> Christina Ng - MPIF; <a =
+href=3D"mailto:contact@mecha.store">contact@mecha.store</a><br><b>Subject=
+:</b> Re: Quote for EXW HK =
+AIR</span><o:p></o:p></p><p>&nbsp;<o:p></o:p></p><div><p>THanks, got Sea =
+quote and =
+timing?<o:p></o:p></p></div><p>&nbsp;<o:p></o:p></p><div><div><p>On Tue, =
+Dec 1, 2020 at 5:08 PM Joreen-M&amp;P Int'l Freight Pte Ltd &lt;<a =
+href=3D"mailto:joreen.boo@sin-mp.com.sg" =
+target=3D"_blank">joreen.boo@sin-mp.com.sg</a>&gt; =
+wrote:<o:p></o:p></p></div><blockquote =
+style=3D'border:none;border-left:solid #CCCCCC 1.0pt;padding:0in 0in 0in =
+6.0pt;margin-left:4.8pt;margin-top:5.0pt;margin-right:0in;margin-bottom:5=
+.0pt'><div><div><p><span style=3D'color:#002060'>Dear =
+Titan,</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>Good day to you. Based on 300kg chargeable weigh =
+( later on when cargo received by airline, will re-measure / re-weigh =
+again ).</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>Estimated lump sum @ USD 1755.00 x 1.38 + SGD =
+361.30 =3D SGD 2783.20</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>AIR FREIGHT: USD 4.00 =
+/KGS</span><o:p></o:p></p><p><span style=3D'color:#002060'>SECURITY =
+SURCHARGE: USD 0.45 /KGS</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>THC:&nbsp;&nbsp;USD 0.35 /KGS (MIN: USD 15.00 =
+.-)</span><o:p></o:p></p><p><span style=3D'color:#002060'>CFS: USD 0.20 =
+/KGS (MIN: USD 30.00 .-)</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>HANDLING: USD 65.00 =
+/SET</span><o:p></o:p></p><p><span style=3D'color:#002060'>DOCUMENTATION =
+FEE : USD 60.00 /SET</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>BRIDGE TOLL FEE: USD 10.00 =
+/SHIPMENT</span><o:p></o:p></p><p><span style=3D'color:#002060'>CARTAGE =
+FEE: USD 0.25 /KGS&nbsp;&nbsp;OR&nbsp;&nbsp;USD 20.00 =
+/CBM&nbsp;&nbsp;(MIN: USD 120.00 .-)</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>SHIPPER WAREHOUSE CHARGE: AT =
+COST</span><o:p></o:p></p><p><span style=3D'color:#002060'>EXPORT =
+DECLARATION FEE: CIF Value in HKD x =
+0.00025</span><o:p></o:p></p><p><span style=3D'color:#002060'>EXPORT =
+DECLARATION HANDLING&nbsp;&nbsp;FEE: =
+HKD100.-</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><u><span =
+style=3D'color:#002060'>Subject to local charges in =
+Singapore</span></u><o:p></o:p></p><p><span =
+style=3D'color:#002060'>agency fee - sgd =
+60</span><o:p></o:p></p><p><span style=3D'color:#002060'>import permit - =
+sgd 40</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>transportation - sgd 90 or sgd =
+0.30/kg</span><o:p></o:p></p><p><span style=3D'color:#002060'>terminal =
+handling fee - sgd 50 or sgd 0.35/kg</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>labour cost - sgd =
+60</span><o:p></o:p></p><p><span style=3D'color:#002060'>singapore gst - =
+7%</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'color:#002060'>Thank you.</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><div><p><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>Bes=
+t &amp; Warmest Regards,<br>Joreen Boo / Assistant Sales Manager =
+</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>M&a=
+mp;P International Freights Pte Ltd ( HP: +65 93851307 ) =
+</span><o:p></o:p></p><p><b><span lang=3DEN-GB =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>P=
+hone </span></b><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:black'>:=
+ 65 6221 2218 Ext 108</span></b><span =
+style=3D'font-size:11.0pt;font-family:"Arial",sans-serif;color:black'>&nb=
+sp;&nbsp; </span><o:p></o:p></p></div><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif;color:#1F497D'=
+>&nbsp;</span><o:p></o:p></p><div><div =
+style=3D'border:none;border-top:solid #B5C4DF 1.0pt;padding:3.0pt 0in =
+0in 0in'><p><b><span =
+style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'>From:</span></=
+b><span style=3D'font-size:10.0pt;font-family:"Tahoma",sans-serif'> =
+Christina Ng - MPIF [mailto:<a href=3D"mailto:cs@sin-mp.com.sg" =
+target=3D"_blank">cs@sin-mp.com.sg</a>] <br><b>Sent:</b> Tuesday, =
+December 01, 2020 14:51<br><b>To:</b> 'Jeremy Tan'; 'Joreen-M&amp;P =
+Int'l Freight Pte Ltd'; <a =
+href=3D"mailto:contact@mecha.store">contact@mecha.store</a><br><b>Subject=
+:</b> RE: Quote for EXW HK =
+AIR</span><o:p></o:p></p></div></div><p>&nbsp;<o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Dear =
+jeremy</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>&nbsp;</span>=
+<o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>Shall check =
+and revert.</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>&nbsp;</span>=
+<o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>&nbsp;</span>=
+<o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>&nbsp;</span>=
+<o:p></o:p></p><p><span =
+style=3D'color:black'>&nbsp;</span><o:p></o:p></p><p><span =
+style=3D'font-family:"Calibri",sans-serif;color:black'>Best =
+Regards,<br>Christina Ng</span><span style=3D'color:black'> =
+<br></span><span style=3D'color:#1F497D'><img border=3D0 width=3D249 =
+height=3D122 =
+id=3D"m_-1041347577184586813m_-8085043537088432651m_97420567383594000gmai=
+l-m_2186897512004108344gmail-m_-7929929572702814113Picture_x0020_1" =
+src=3D"cid:image001.jpg@01D6CC96.CC0F16F0" =
+alt=3D"cid:image002.jpg@01CE3D19.73C39F80"></span><img border=3D0 =
+width=3D137 height=3D93 =
+id=3D"m_-1041347577184586813m_-8085043537088432651m_97420567383594000gmai=
+l-m_2186897512004108344gmail-m_-7929929572702814113Picture_x0020_3" =
+src=3D"cid:image002.jpg@01D6CC96.CC0F16F0" alt=3D"UKAS_9K_Color_ver =
+2015"><span lang=3DEN-SG>&nbsp; </span><img border=3D0 width=3D201 =
+height=3D80 =
+id=3D"m_-1041347577184586813m_-8085043537088432651m_97420567383594000gmai=
+l-m_2186897512004108344gmail-m_-7929929572702814113Picture_x0020_4" =
+src=3D"cid:image003.jpg@01D6CC96.CC0F16F0" alt=3D"QMS - SAC 2015 =
+version"><span lang=3DEN-SG>&nbsp;</span><img border=3D0 width=3D114 =
+height=3D107 =
+id=3D"m_-1041347577184586813m_-8085043537088432651m_97420567383594000gmai=
+l-m_2186897512004108344gmail-m_-7929929572702814113Picture_x0020_2" =
+src=3D"cid:image004.png@01D6CC96.CC0F16F0" =
+alt=3D"cid:image004.png@01D55BF9.0BF6B6C0"><span =
+lang=3DEN-SG>&nbsp;</span><img border=3D0 width=3D224 height=3D153 =
+id=3D"m_-1041347577184586813m_-8085043537088432651m_97420567383594000gmai=
+l-m_2186897512004108344gmail-m_-7929929572702814113Picture_x0020_5" =
+src=3D"cid:image005.png@01D6CC96.CC0F16F0" alt=3D"SLA =
+Logo"><o:p></o:p></p><p><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>M&amp;P INTERNATIONAL =
+FREIGHTS PTE LTD</span></b><o:p></o:p></p><p><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>37 Jalan Pemimpin =
+</span></b><o:p></o:p></p><p><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>#04-10 and #04-12 =
+(Warehouse)</span></b><o:p></o:p></p><p><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>Mapex =
+</span></b><o:p></o:p></p><p><b><span lang=3DEN-SG =
+style=3D'font-family:"Cambria",serif;color:black'>Singapore 577177 =
+</span></b><o:p></o:p></p><p><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;color:black'>&nbsp;</span><o:p></o:p></p><p><sp=
+an lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Phone</span><span lang=3DEN-GB style=3D'color:black'> </span><span =
+style=3D'color:black'>: 65 6221 2218 ext =
+111</span><o:p></o:p></p><p><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+</span><span lang=3DEN-GB style=3D'color:black'>Mobile : 65 9002 =
+0913</span><o:p></o:p></p><p><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>(</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+</span><span style=3D'color:black'>Fax : 65 6324 =
+1629</span><o:p></o:p></p><p><span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:Wingdings;color:black'>+</span><spa=
+n lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Email : <a href=3D"mailto:cs@sin-mp.com.sg" =
+target=3D"_blank">cs@sin-mp.com.sg</a></span><span =
+style=3D'color:black'><br></span><span lang=3DEN-GB =
+style=3D'font-size:13.5pt;font-family:Webdings;color:black'>&quot;</span>=
+<span lang=3DEN-GB =
+style=3D'font-size:10.0pt;font-family:"Arial",sans-serif;color:black'> =
+Web :&nbsp;</span><span style=3D'color:black'><a =
+href=3D"http://www.mp.com.sg/" =
+target=3D"_blank">www.mp.com.sg</a></span><o:p></o:p></p><p><span =
+style=3D'font-size:10.0pt;color:black'>=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D </span><o:p></o:p></p><p><span =
+style=3D'font-size:10.0pt;color:black'>&lt;&lt;All business is =
+transacted only in accordance with SLA Standard Trading Conditions =
+(latest edition).&gt;&gt; </span><o:p></o:p></p><p><span =
+style=3D'font-size:10.0pt;color:black'>**********************************=
+************************************ </span><o:p></o:p></p><p><span =
+style=3D'font-size:10.0pt;color:black'>This message is confidential and =
+intended solely for the use of the named addressee(s). =
+</span><o:p></o:p></p><p><span style=3D'font-size:10.0pt;color:black'>It =
+may contain information that is covered or protected by legal, =
+professional or other privilege, work product immunity or other legal =
+rules. Any unauthorised use or dissemination of this message or any part =
+of it prohibited and liability (in negligence or otherwise) arising out =
+of any action, or forbearance, by a third party on information contained =
+in this message is hereby excluded. If you have received this =
+communication in error please notify us by return e-mail and then delete =
+this e-mail and any copies of it from your computer system. This e-mail =
+has been scanned for Viruses but it is your full responsibility for =
+Virus Checking. </span><o:p></o:p></p><p><span =
+style=3D'font-size:10.0pt;color:black'>Thank you for your =
+co-operation.</span><o:p></o:p></p><p><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>&nbsp;</span>=
+<o:p></o:p></p><p><b><span =
+style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'>From:</span><=
+/b><span style=3D'font-size:11.0pt;font-family:"Calibri",sans-serif'> =
+Jeremy Tan [mailto:<a href=3D"mailto:wytanj@gmail.com" =
+target=3D"_blank">wytanj@gmail.com</a>] <br><b>Sent:</b> Tuesday, =
+December 01, 2020 14:48<br><b>To:</b> Joreen-M&amp;P Int'l Freight Pte =
+Ltd &lt;<a href=3D"mailto:joreen.boo@sin-mp.com.sg" =
+target=3D"_blank">joreen.boo@sin-mp.com.sg</a>&gt;; <a =
+href=3D"mailto:contact@mecha.store">contact@mecha.store</a>; cs &lt;<a =
+href=3D"mailto:cs@sin-mp.com.sg" =
+target=3D"_blank">cs@sin-mp.com.sg</a>&gt;<br><b>Subject:</b> Quote for =
+EXW HK AIR</span><o:p></o:p></p><p>&nbsp;<o:p></o:p></p><div><p>Hi =
+Joreen / =
+Christina,<o:p></o:p></p><div><p>&nbsp;<o:p></o:p></p></div><div><p>Can =
+quote?<o:p></o:p></p><div><p>&nbsp;<o:p></o:p></p></div><div><p>Thanks.<o=
+:p></o:p></p></div></div></div></div></div></blockquote></div></div></div=
+></blockquote></div></blockquote></div></blockquote></div></div></div></b=
+lockquote></div></div></body></html>
+------=_NextPart_001_02C7_01D6D494.9C5012B0--
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0
+Content-Type: image/jpeg;
+	name="image001.jpg"
+Content-Transfer-Encoding: base64
+Content-ID: <image001.jpg@01D6D494.9AC1AA80>
+
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIf
+IiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7
+Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAB6APkDASIA
+AhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQA
+AAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3
+ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWm
+p6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEA
+AwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSEx
+BhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElK
+U1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3
+uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD2aiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAorG1G51+xdprSzt9Rgznylfy5QPbPB/SsiL4maJHcfZdViu9Ju
+BwUuoSB+Y4rFVo3s00y+R2ujsKKo2OtaXqaBrHULe4B/55yAn8qvVpGUZbMlprcKKKKoQUUVwPib
+4i3/AIc1Oe3k0GWW2jbC3GSFasqlVQsn1KjFyO+oryf/AIXbx/yBTn/roK7zwlr03iTRE1KW0+yi
+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
+KKKACiiigAooooAKKKKACiiigAooooA//9k=
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0
+Content-Type: image/jpeg;
+	name="image002.jpg"
+Content-Transfer-Encoding: base64
+Content-ID: <image002.jpg@01D6D494.9AC1AA80>
+
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAoHBwkHBgoJCAkLCwoMDxkQDw4ODx4WFxIZJCAmJSMg
+IyIoLTkwKCo2KyIjMkQyNjs9QEBAJjBGS0U+Sjk/QD3/2wBDAQsLCw8NDx0QEB09KSMpPT09PT09
+PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT3/wAARCABdAIkDASIA
+AhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQA
+AAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3
+ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWm
+p6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEA
+AwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSEx
+BhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElK
+U1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3
+uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD1SWa9
+l1Oa3tpbeJIokcmSIuSWLejDH3ad5Oqf8/ln/wCArf8AxyiD/kO3v/XCH+clX6AKHk6p/wA/ln/4
+Ct/8co8nVP8An8s//AVv/jlU/EfizTvDMUYu2eW6m4gtIRullPsv9TXnt34t8V+I7l4rd10W1WYw
+SLCvmTRExl0aR+gQ4xuGMYNUoNhc9NaPU1GWvbID1Ns3/wAcpivfOcLqOnk+gtz/APHK8Mm/sVrj
+S59V1qe+lUodRhklklDhkySrAY+VjggE+ueopkDeEZpXkdUgjdoCyN5yvGnlnzdm3IL79uM/LV+y
+Fc968nVP+fyz/wDAVv8A45R5Oqf8/ln/AOArf/HK8U0WPVIB5mg+JpYlitBL5RnEplmEfmOojJ4U
+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
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0
+Content-Type: image/jpeg;
+	name="image003.jpg"
+Content-Transfer-Encoding: base64
+Content-ID: <image003.jpg@01D6D494.9AC1AA80>
+
+/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAoHBwkHBgoJCAkLCwoMDxkQDw4ODx4WFxIZJCAmJSMg
+IyIoLTkwKCo2KyIjMkQyNjs9QEBAJjBGS0U+Sjk/QD3/2wBDAQsLCw8NDx0QEB09KSMpPT09PT09
+PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT3/wAARCABQAMkDASIA
+AhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQA
+AAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3
+ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWm
+p6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEA
+AwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSEx
+BhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElK
+U1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3
+uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD1xIzL
+JKWkkGHwAGwBwKf9nH/PSX/vs0Qfem/66f0FTUAQ/Zx/z0l/77NBgUAkyygDqS5rJ8UeLLHwrYrL
+dbpbiU7YLaPl5W9B7e9ea65f6rrNvHf+IrmWHTgQ8unwkxoE3lCobOXlUjcVPamkB3+peNvDWlOY
+7nWlaQdUhcyH/wAdzWa3xM0IKjCPWmSQ4jcWz7XP+ye9eZwa9p2mA22m6dHfvLBHBOzRlEmVd27C
+D5ssCuT6rmo7XxfqEUVqkdpHJBYCMoMN8mxXUEsPZz19BjHNVyjser2vxG8L3EvlSalcWsgOCtyj
+xkfXIwK6e1e2vYBNaXfnxN0eObcD+IrwBvElrdQIup6ZI9uGj2+XLzII1YKjO3J5ck85PA4FaemW
++b3UtT8K6r9haMrLFbr8iLGAvmNKDkBQWOBznB9qXKFj3H7OP+ekv/fZo+zj/npL/wB9muL8GfEU
+azJBp2tw/YtRlQPCxBWO5U9Cueh9v/1V3VTawiH7OP8AnpL/AN9mj7OP+ekv/fZqaigCH7OP+ekv
+/fZo+zj/AJ6S/wDfZqas/W9Xi0XTJLqXBYcRpnl27Ck2krsqEJTkox3Za+zj/npL/wB9mj7OP+ek
+v/fZrhfBGt3c+vTwXMrSC6DSnPZxjkenHH4CvQKinUVSN0b4rDSw1Tkk7kP2cf8APSX/AL7NH2cf
+89Jf++zU1Q3F3BaRl7iVI1AzljjitDnSbdkH2cf89Jf++zUZEQnEPnSGQjO0OcgeprNOpXuqvt0l
+FjgBw1zKOP8AgI71pWGnxWEbBCzySHdJK5yzn/D2qVK+xpKnyL3nr2/zJPs4/wCekv8A32aPs4/5
+6S/99mpqKoyIfs4/56S/99mj7OP+ekv/AH2amooArTRGKPeskmQR1bPcVZqG6/1B+q/zFTUAQwfe
+m/66f0FQ6vqlvouk3OoXbYht0LtjqfQD3JwPxqaD703/AF0/oK4P4r3BuV0XQwxVL663TY6+WmM/
+zz+FNAcbPqsv73xVrI8y/uuLODJxEh+6o9OOSRyFIxy+RH4S8G3/AI7vpL/UJ3isFfDygAFyONkY
+6AAYGeg6Vn6/52ueLLfTIMKQyW8ajorPgt+WcfRBXonxB1oeCvCVnouinyZpkMSMv3o41HzN/vEn
+r7k1Qxb7xN4Q8Awyadpdsst2qlXW2AZgf9uQ9/bJPtUHw58VeHNM8GR2t3d29pcRFzcpLwZCSfmH
+97IwOPTFT6P4J8Da3YvLp0a3RiAEpjuZDtYjPPNY/wAPfBWh694Te+1KzMtwJ5EDCV14GMcA4paW
+A6L4dx6fqnhfUdtpG2ny6jO0cEiAgISCBg+1ct4g8A2Gq6Q+ueCZjJAynzbNGPIH3go6gj+4fw7V
+0nwf/wCRHl/6+5f5LXmXg/xbc+EtZadN0lnK2LiAH747Ef7Q/wDrU+ugFrSr+PxJYnS9Sk23cQMl
+tdfxAgdfXcAOf7yg/wASgn1T4feJp9b02ay1PjVdOfybgE8uOz/jg5+me9eM6/q9pc+J5NW0SGW1
+VpFnWOQD5ZOpxgkYJ5/E12uh3q6f8Q9HvYMrb6rAbdwO/wAoZPyBjH4GhoD16ikYEqQpwSODjOK4
+PVYdeguwmqXIeyJwbpciNR23KvT8R+NYznyLY3w9D2za5kv66Hby3ltCcS3EKH/acCvMvGOtjV9X
+Kwvutbf5IyDwx/ib+n4Vc8RabaaNpsBjnSS4nHyeWOCO7ZB9/wBao+FNBGr3xluRixt/mlYnAY9l
+z+p9vrXJWnKb9nY9nBYejh4vEt3S8vy/I6D4dWtv9nu7gjN0HCHI5VcZGPrz+VdnJKkKF5HVFHUs
+cCvP9R8TxaT4hvZ9IaO4S5iVX67VkXjI9eKpW1nrni+aN7iWRrUvgyMMIvrhe9XCqoLkirsxr4OV
+ebxFWXLF23322OivvHCSzi10S3ku5mOA+04z9Kn07w5eXFwLrXrrz2U7o4EOVX6nvVnR7XTNBhmg
+ty7zRlVkcrlnY9APXnPA6c1fOrQAEsk4CjMhMR/d8Z+b06fy9RWsYN6zZxVMRCF4YdWXd7v/ACLq
+qFACgADsKWqEesW8siRosxkYkbNnIxjk+3zCiPWLaQgL5u5sFAYyC4OcEeo4NbHCX6Kz4dZt7h41
+RJsyDI3JjjOM/SprPUIb3Ii3ghQ+HUrlT0I9jg0AWqKKKAIbr/UH6r/MVNUN1/qD9V/mKmoAhg+9
+N/10/oK83+JtvHN4v0AXPlfZ3ilUmYgIOhJJJH869Ig+9N/10/oK4/4o2Er6HbavbRiSbSZxOVIy
+Ch4b+h/CmtwPL/DpgtviZY7MCAX+1OnQ5C9CR3Hc/Wuj+NcMg13TJiD5TWzIp7bg2T+hFct4njMe
+oxahaXYnO2PfLHubypAo25c/eYgZycE4PGK9Pmjs/it4GjaORItRhIPP/LGYDkH/AGW/kR3FV5jM
+v4L/APIF1n/rsv8A6BWp8Jf+RCl/6+Zv6VX+FWlXujWeuWmo2z286TrlWHBGzqD0I9xVj4S/8iFL
+/wBfM39KT6gJ8H/+RHl/6+5f5CvEm++31Ne2/B//AJEeX/r7l/kK5HwP8P0v0l1nxGnkaVGrMiSM
+U80f3ieoUfr9OrTs2B58QTwoyT0Artre0hg8a+GILODymEsZkcDBdgw3ZwzDjBGByMc1jSppep+K
+ZnsITZaRG2U4kf5VHBOMsNx/IH2rr/h/ay+IfHsmpygG302MgFX3p5jZHynAznLNkjPqTTbA9hpk
+rxpC7TFRGqksW6Ad80sjmOJ3ClioJCjqfavMtb8aXmsWz2scK20D8OoO5m9ie1c1WrGmtTqwmDqY
+mXu7LdmPfzwXOoTy28Yitt5MUXOAueg9M9fxqWbVLq7totPt1MVqCAlvF/Gx7serEmotN0y61e8W
+2s49znkk8BB6k+ld7a+ANOjsDFcvJJctz56tt2H/AGR/jXBTpzqXaPo8TiaGH5VPVrbr8/61Obk8
+GXtpocuo3O3zYsSfZhzlQedx+nYV6Hp00F1pdvLZgJA8YKBAPlGOn4VyVxca94V+S6/4memEEbiD
+lV9Ceo/HIpvgPW41uJdLO5YXZpLUMckDqV/Ln866abjTny7XPMxUKuIouo2pJO6a2t108vPzNgx6
+dAVkhF4hLKI5V5EjAscgtxnl8565Jp0s9l/paM986bSZkABDbQqsT3zjAI6dcU2I2Eu2KOS7k+zv
+tiT5WB+8u0A8dm684GakX+zmcgQ3GZMLK2BwWlPDe+4Ed+Pauo8UaBp0V4Nq3EcihyY9iYjH3ieR
+x94fdP8AKpLRbKMxyqbtxCnyzOvAAXbt4HUbj25PqRU1rBp+oee8Ku/mp87n+AtnKg9m55Hbip/7
+HtyuxmleHeXERf5Qc56D3OaAM0nTw8RC3QT7Kqq3lqQEwQDkjIbLdu9TwX1jpyM7NcMCqhZZEzvQ
+EKNuOw3Z6d81cj0e1iiESh9gCKAWzwrFgPpk0kWkW8ezcZJRGNqiRs4XBG36c/yoAtwzLOrMmcKx
+XJHcHB/WpKhs7WOxtI7eIsUjGAWOSfqampiIbr/UH6r/ADFTVDdf6g/Vf5ipqAIYPvTf9dP6CpJY
+0mieKVQ8bqVZWGQQeoNRwfem/wCun9BU1AHjOvaC3hK4n06/NxceHroH7EgICpKWyEZuqnPOcgHA
+yeCK56L+2vAurC902UvEUVvNRS0UsbcjcOOMkgHjJBxX0Be2VtqNpLa3kKT28q7XjcZBFeear8PN
+R01JP+EflS8s3PzWl05EiqV2FUk6EbSQA2ducjmqTGT6P8XtIv7fy9Vjk0+4K4LYLxk+xHI/EVV+
+GOv6TpvguS3vtStLeb7RK3lyyhWwcYODXH61YWMP26XUtFvtMuQTJBGsJSNgAAI8jK5LEnd6LjvW
+Otpokur3UKX7LaxKPJeSVV81sgH5iuAACT0yce9OyA7XwF470fwt4PeC+eWS6NzI6wRRksQcYOeg
+6etY3iDxfrXjx3traE22mRDe8SEkBQR80jd8ZHAHpwTVOxtdAWWHy7e71VpLdSYoQzMsuV3DAAGM
+FsfQetdNpXg7xTraBJ1TRrF41jk3IA7YUoxWMcLuUjIPGRmjQDAtLS5tLs6N4bnabULyNYpvKZsL
+xkyb+gHJA25BVsnk4r2Xwp4bt/C2hxWEB3v9+aXHMjnqf6D2ApPDXhTTPCtmYNOh+dv9bM/LyH3P
+p7DitqpbuIKxdU8JaXqrGSSDyZicmSH5ST79jW1RUyipKzRdOrOm+aDszhL6JvC8jw2b3FrpyQ7p
+r63iSZxLnjzQclUAwcAd6l8ReKrixWC3tdQtlntoop7p8KDNuIGxFPTI3MfQY9a6G58M6Xd3st1N
+bsXmKmZRIwSUr03KDhse4qSTQNNltbq3ktVeO6ZmmySWYnrz1Hbp0xSUbKyCc3OXNJ3ZlXV5farq
+WqwWmoLp9vpyqgcopDysu75twPygEDA65PNW7LwvYwXtvqBiVbxFy/kkrGzkYLBe3epZ/DGl3N21
+xNbFmfaZFMjbJCv3Sy5wxGO4rVY4QkdhQ4p7jjUnC6i7XM6PQ7aFV8t5ldSNsgf5lwCMdP8AaP51
+JHpFtFMHUyYBVthf5cjofc9/rzXmuleOtd1C5mjk1CFNkZdQsMYLHIGPmIHGcn2Bq/J4i163mjju
+Nf047pI1YwwBtqsxBbnHTHT6U7oizPRLe3jtovLiGF3Mx9ySST+ZNS15lfeJ/ENlNCP7a0+SGWZY
+t6RKSucZY9sc+tP1LxPrljazSpq0BZJVQLLDGowUDckHrkkcUXCx6VRXn6a5rLEBtcgRtwUq1tGC
+CU3Y+9gn9ODVGTxbrSanb2w1q1aOaESF/IQEMVY4xnp8vX3FFwsenUV5Hqvj3XtPuFih1O1uFMKS
+eYsKEZZckDHoa9Yt3MltE7csyAn8qLg1Ybdf6g/Vf5ipqhuv9Qfqv8xU1MRDB96b/rp/QVNUASZH
+kKeWVZt3JIPQUubj+7F/30f8KAJqyPETXIsoks9Ti0+aSTYskihtxKnAAPvg/ga0c3H92L/vo/4V
+Bd2Iv0RLu2tplRtyh8nB6enoT+dAHOXF1ewWTLN4s05JvO8zeUQjyiuMbfckY/majSwnjXfda1o8
+sjk7d8EQB4HfGcghv88DbXw1pyIqLpWnhU4UBOnT29hTD4W0thhtI08jaVwU6A846dKAMqCPUkEl
+kniewW72jEaRRgjcF2nGO56eufy6ZtTtIpDFJOglTAYYI54/xqlL4dsJpFkk0vT2dVVQxTkBcADO
+OgwKtSWCykGS2tmI6Ek+3t7CgCWDULa5cLDMrMRkDocf5NWaqR2phcvHDArE5yCfQD09APyqXNx/
+di/76P8AhQBNRUObj+7F/wB9H/CjNx/di/76P+FAE1FQ5uP7sX/fR/wozcf3Yv8Avo/4UATUVDm4
+/uxf99H/AAozcf3Yv++j/hQBXOiaWeum2Z/7YL/hR/Yelf8AQNsv+/Cf4VYzcf3Yv++j/hRm4/ux
+f99H/CgCv/Yelj/mG2X/AH4T/CgaHpY6abZf9+E/wqxm4/uxf99H/CjNx/di/wC+j/hQBX/sPSv+
+gZZf+A6f4Uf2Jpf/AEDbL/vwv+FWM3H92L/vo/4UZuP7sX/fR/woAr/2Jpf/AEDbP/vwv+FXQAAA
+BgDoBUWbj+7F/wB9H/CjNx/di/76P+FABdf6g/Vf5ipqryJPKu1hGBkEkE+uasUAf//Z
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0
+Content-Type: image/png;
+	name="image004.png"
+Content-Transfer-Encoding: base64
+Content-ID: <image004.png@01D6D494.9AC1AA80>
+
+iVBORw0KGgoAAAANSUhEUgAAAHIAAABrCAYAAACrBNYuAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAO
+xAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUATWljcm9zb2Z0IE9mZmljZX/tNXEAAEEaSURBVHhe
+7X0HfJXl+fZ1ckaSc7JJICEJCXsjiMpSQZx1oHXgtlSx1mqt26q1rtqqVavVqtRaR+tEwFGrqFQU
+RED2kr1CyCBkJycnOcn5rvt+3jeLjBPg/334//r8PJKcvPO5n3td93hcIQ78d3RhBjhdMmMOOYX/
+058bv9DrVAQbsL0yiJXFQczPr8XcgiDSohy4dXA0pvSMQpwnQo9rOjWEUIjXMv8d1HAd1Fn/H5+k
+E96cdhZBiwIN+LKgDv8h4RYX12FreQiVtSSV0MzpQH4NcOXCaoxMrMGNg6Jwdd9oEk0oJ+QMWQQ8
+WDIC/yVklxclJ90iXjDUgKX7a/Hhnnr8e08Aa8vrAf6HCFLPxYM8FsUp9BwkZijCgVUlDZj+bRU+
+z6vFw0f50D/WbbH3oQnG/xKyi4R0kIr++hD+vbcGr26rwdeF9SgPCOeRcC4S0CmEpqi0rusgBzfy
+HL93ePh7gwPvbK/DquIKPH2sD2ekRZIzD54b5Vb/JWQrQioByGlGflL46RdGedXz+w9yavGXLX58
+SQKGgjKD/ENkcyIYwtmj6Wfzk/5fxG1UBDaVN+DyhRV49Oh6XNvXa/7ezGSRRRPu+C8hW82UkKHB
+aC/LnjGTKSL0yQ3VmLU7iHqhs9smoPwS/oS3uB2NnmIaRj9fWoXiQD3uHBLDtSPXsgyqcKko66kL
+x/5/c6gS0eKG8roGPLupCk9vDKDIzwnm5MvfjJEp1uahTAtFLTm6IejAr1cGUFHnwAMjYsjkeuUu
+LY//EvIAOpAbjTzFspJa/Hp5FebtpQUjNkkkZaL8jf9Z/3SRG1u6KY2iVBYNGfuRZdXYW1mPPx4T
+i25yry6MQyJky1XTFfHSTF806iBZgV25RhfesoNDmz2J5Q4aofq3rdW4b7Uf+X7OsBLQuohlvIR7
+90ZJqRwcYXSg6GByIRr4MzmyR7QDA5Mj0M/rQRp/9teL8hWTN/xxSIRsmvgQdlfVYyud4MKaBpTX
+hWgYhBDtjEAc7yCrq0e0E6nREUgQ3dLcaxKf+tDkU/hv28aRqpGEw+RvnHVx5h9YbUSp6Ep4nHLE
+wd/DPlXoJ8qVNHJzDkanOHFCihsjEiI4Lw5Uk+n9/ARI3Dd31aGXN4iLekXRBQ2PMw+JkPKCi4pq
+8QrN8P/k1yOvugGygM17G5NcVqSXzxJPs7snfxgcG4FhiU6M68aXSHQj3m10zv/TYfmFBTX1+MV3
+lZi9s5azzefi8zc5Egf3hDoVdTIdDUiPicAFGR5MyXCjO5GeTWUN+IIgwuKieuzh3BWTAdRgJrGd
+nhBSo5yY1CPS0pcdz1GXCGkWl6xTs0rWlAZx4dcVyKvgX4TTxJeSBaw6pgmGquKvVUQ29nLZLaPZ
+Dkctoj0BDI1zYnKqExdmRuJYEral9WcZEtbzH6rYFa5vb8HItbdW1OHqxZVYkMfns0SpUR1dMzss
+m9NQPcgXp8+ZHReBa4jkXNTLg0L6nHN21+LjvbXYLPMmAILMmcydTJmACW5KNB63YF+dEtK+Zkek
+7BIhjYfkQG1Dgz7jPKITeZX8iiKz5Wh1S/tXohtmUA9w5S3bT8LuC+KvW2pwZk8PLs+OxGl0jl3y
+UpbGVI440EZovJ0QKBgMIhAIoLq6GpWVlfB43GigiKqvr9ePfB8fH4/IyEhERUVxrvgm1HURnLTY
+2BiiLbW4elElsVHOKv275qNrtqM8tqX7ahuQQgk0vW8kpvePQh+fC3esqMQLG2tQVS8L3vq0oECL
+ZaBEt4c9960muvHXLhHSJsKTG6swjMpvG/VioxHQ8hnau1/T98q9QiQHSqn43yTSMZMr9ez0AH4x
+IBKTuRIjxCFvXI8tL1lQUAifz4vc3Fzs3ZsHl8uFxMQElJSUICYmBj169MDmzZt5jI/fJ6Kmpgb7
+9u1DSkoKidyA/fuLkZ4Ygy21vXDlohpsKBVOlLt1jQNbv2iI7oqsvClZbtw/3IujqT5kknL8QbxO
+kV1FVAcUqxF874ZOdG/jug/DCOwiIR10jAN4an0N/jYuRmW6iFEjaruqTXgeXyok51O0hPipa4jA
+HCr6T/bWYQoJejOjBeOS+YiWwq+trcWKFSsw893Z2L07BzfffCNSuhvCCKHKy8uRnZ1NrqwiofbD
+6/UhMzNT/yYE79O7Dw3Feuwr2g+3vxR5mf1w5WJDRIctTg/WrpHzCJKn+kBf0EdQPIraRubFAAZr
+S+pBxjcqSIVMJzfiYUlWlKRzrggLELCRCwcqadHdtbIaRdUhGnMOSodGm9yEYTp7uFZPJESUYf5P
+buB7h8gVNHzx7o5afE4D6qIBcbg6vQ5Fi+Zi1pwPSciVhpvSM7Bx0ya4KUaTk5PJkU4VneXlFSrd
+6uqCJHA9qqqq9N+EhERzJ4rTFK8TRclDMH1ZAzYQxBZOtO2zcCatUWcZgWLMXorBk3q68ORoL0Yl
+Eju1lrZtT3xLfVcn3Gr5h22S0VYh1r/dGqE/IyUOSUeGyG02evj8Zj/m76VJRSYp4YMny4pRv8oW
+SeFMQ3vHNIFjOjnxPpQEI/Depv3YPud95P7zKXIsLWCKzYSEBHJeFrqTG2UIEcvKypQb/X6/cmg9
+fTH5WT4xMT4lZAU5tXtMFMrS+uCWFQ6sYbgJZs67Nmx/RVaMGCv8TB/oxqMjxZE37ooeYi30ajLA
+l4W8l+r+DoZIJ0F1+J4uMkq/WLmWGZ2c2TlEZyvZxUUB/J4iFW5enBMlFmgfn410UNofJhci5OQq
+8Xjh3LcbPZbOwvQsB3ZvWomcCBcNllj1OcWwEeLFxsUhNbWHitKePXsq0cSoEf3ppA8rurGSHCmc
+GhkdTdFXg0pO0i0bPfgmr6oV2B0mLXl/E5LkzHBNR/D3+0ZE4d7hPkpNa7aaEVGOXEvrfo1wfpPS
+a/NmJlIilqwDfWjpjlL9Gt4IQ0eKSK3HPauqUSZWlKxg0nMXxesFvVxwEpmQRWnWjMiEDkxMPa6t
+v1vfRScgoqYSmctnoe/qD1G4fCGcV1yOlPRecK3ZoESUj9PpVCOmlgSNi4tHcXEJdu7cif79+6ue
+7NUrg8SLQmlpKTZu3KiWajmPye6ZjLvW+DFnu1+BkybFEN5kmdfkWXIiJ9vHd//9CA9uGiSRC+v9
+Vf+ZK5v/h/BeDnFUCTKrzmtfN+oCsazeCQQLuqtobVI/XRKtLbWWecGnvmfYRv0rUdQ8gitrdVkQ
+P6N+yqDrsYvOLFy2wmg9KQa7tKWRLeuVdLbSd3FWo3yI2rYcw1e+i1GBXOyrLsFuTww27szFVT+5
+Apu3bFUrNJqcVU+EpK6uVjltx44dRErcJF4vFbkiYoNceGVlhRS93ZW4ZaVlCFWV4N2dPszIJWc6
+AzphB2XX6NxS3QT8eGiki0QU3WsPA4CYYRZnDiXXzBwRq/Z3reen+ek8hwZgBK35H6VrVLrZlTs4
+j386kCObw2V8qm/20Ur9ni/O1ScPqX+OCGEdrTDxBY9NcmLXflHi1rTY54s+sFavil0bZbaQ/UbO
+jGTKA62clG/eQNpnz8NDjizsPRB7GHSNjPSQIKXIz8tXX1H8PhlyuT25e/W8bt26qe8o+jEnJ0d1
+jIhesVrlZ/Ene3ajuHV4cd8a6tJqvgtRpq5QUfWW/V60rEFD6u7MSpxRU4Bd2yuQ1advE/F0cVpe
+MG/z7q4AdjHuqNZqZ9JKWJIOev94FyZ2D1+sys0PIKTtR8nDl9fVq5Vaxnc3lh1RHXkpvksJTUuB
+lq7sTbSiJkTVKVAb+U1EPA/fx/haEb8vo2NcrQCxZeGJ78hjZUWEohiyCVQg8+OnkLz0fbogLlS5
+Y1CxexeVvVM5T4yUpKQkiOthiEhAorZO/cGBAwdQrO5XXSgTLfpR/EkhunCrj4ZRt7hYuPnzzd9W
+YDPzaIz535n4b7X6LVRI4TNaXNcl78ddg30oKEtGQVEx3FHRSEtLM3Nj8xFvk1NdhxcJdihUaUnV
+jqWAzFMDfWkXxWqTodMxL5q/HsiRFvPIH/9Ex/8bZoCJyayPqH5fk9yeszuATyfH4zRmhjWucJ2n
+EKq4soSYEj3I4Wc9OXg5s8pW8t9i0RdxSYgqzkH27AcRv2Eh6ryxfGG3QalIRHuI6yCTICLVZorq
+6iokd0tCTGys6kq/X3zIChI9XrlWiCigQCnBgUgS7pVcUE/JArJ93i4wpE13iVRQL07Prsfd3blI
+y6v4q1MtZBHn8q8YXEZqGHK+sCXAJCzhRtu6b03GprnU9+U9EokGXdWn66Z0G6LViMTPmfb1xAYR
+qU2YqRHZ1sNQT363P8hPHY5PkRs3X+UORj6AZK6qwXEWSbJpI5HDNlcE8UWJC8/NW4WImY8jfucK
+BH3kKFm1raIg0dFRWLd2HVatXE1fsZvqSBGjxx13HKZMOUd/TrCgNzGAbNErTyKWbHpKEtb7Pbh3
+RbkxyA4GBLfnnut5ai8H7suoRC2jPGW1AQVCZKF5vV4V5SEBxunfynMsL67FS1spRVTFqENi82rj
+IrW1tLkFDyK3n0cJNyK+a2K1HY6kQ84JFwOnUqRZe4uDhKzi31/dXkNCtlTM7YmCKIrUEQkebP/k
+DfR48WnUVFajjkTU11C51dIuE1Hl4Kpfu2a98Q/5xvHxcbjn3rtUJ4qLIdzXGhCXCYqJ8aKORtRv
+vqsmHswTW+TVtPeE7XxPBGtcDzr7QxoQXR2BUoGh6HvUBQPK+cKRYmwJVBjpzENCajoeXCvAiQEb
+2huaZcBHU9uD4Ho8Bdv1xGWbPID2z219zTbdD1k9lQLsWsZFu0/C95mdE8QvBwZxVEJ4q+jFF2bg
+T396Bh7qskiKU1mNIYco0LadXlndeXl5qicrK8px4QXnUTf25wRSFFujraiG/P3lbX68v4urrQtQ
+1wHvynlIcAVxf3oVMqLikRvwoLqqUo0s4cYo6kcZW7ZsUax3X94ezMhz46O94g93TAi1/0hNh7w/
+Dduf9PfQeJR5tAGF8Bdcm4SMophKlyBiSAJpHQQ2yZVi9Ly01Y/njumckDNnvocnn/ozIj100KMs
+TlJuZOS8HTMyGKxTA+bSy6Zi0KD+OGfK2S2I2ParmrDUI+uqzWLUAH8zyzPc+dFVFsTvBjbg5DQv
+8iv8CuRnZfUifhsgEWPUCBMfVkS72+VGYmoqctcW87zu5t52Rl5b9zRSF6FaBzJjHGQIWRRGb3YV
+X2mTkHKpDAnndOZoyYEk5j931uEnfWq5mjzNov0W3KSiw6EY6eOPPaHWaJRFRHk3c4sDb2QgLvmb
+gyKsTi3T226/VS3TtobtHqiY4gF/WF+NHQzcaljKRkzCIKARdcZ2l3V8VWYIP8l0EhGKgJ/gu8ft
+0b+LSBc3JxCopdgPcJENVJTJSaPnkWOrULA5Cu9LgNqy25Q8rWybxrfmy94+JBr9YmxmCF+k2q/U
+LrKTqfCbNSvtXFeMkxD1VBlzFP600Y83x7sbJ8EGi+US5RUVeOKPTykCY7sKTXqgHZ5Sm8uhscWi
+fUUMT5XquWIdth5KRI3CmAf9dG+Ai0tyKmzft7MV2XRFca1UOpBLBsXV43cjohkgoM9cG1TjJpoo
+UQPvJyCEuDmC6Z544vEoLCzErFmz4I32YVjvDPRftAyO2JMQSsmg2KQLonK01UTKY9E9O7mnE9P7
+iW48+NEuIbNjnITfjE/Y3mjkJlq2s8iVbzP0dEmWUdZNHAX88x9v4NtvlyjyYsNsymudLDwJCCtK
+U16GNWvX4IILfkxEp47ENVzROHSlq/xUOPF36/2oJVDtkHwbtYQPtBg7fCm6WdHOBjw2KgZp7hrU
+OSNRmJOHWt5bLGkRowL/yb99+/bVn59/fgbem0lC0oKNpxtUX5SH9En7sefsu+jkB4yEbf2+fMYk
+xiYfHemDV3zrQxgHENImwGCmYUheSR5hSVs8HHgfi2MpXmtp2d2/phrjUlzI8jZddteuXXj7rXe5
+kiPVyrQ5qmMi0nKmGOvXry99szSdwOPHT1Diic5sy7ixr/fajgAWFUj6YjO3qZMJaiXx1A24ekgk
+c2siUVVZZ6xrQoIyxPiSrAPxa0VCFDJY/dCDD+Pzz//DbIM4+sCUUKXlFMHRSF0yBxX9x6Ns4AlA
+dVkTuiUUFcLyc9/waBxDlXSoo01kR5ZOX3LksHhajMyzFEKqQWLFD1vcVFcZVzzF2GYGaO9jBtor
+Y+MbgX4hYk5OLq1Ow42dJVoJoauqqtWcf+ihBxg47qYBYonu7927lwhKzwPeWaIGMjc51UH86XsR
+Y+b3ZhUYHc6THqen8B0p6rLjHLh9EA0PIhE+EmfP3k3KfeLw2wiTIDlLlizB008/i6VLv1N/Vt6v
+gsCEcKWDoL2jsgQ9v/w7KrJHoUF0a7C2CVTifS6kz/iL/sbqtf3MrmtH82rtiFZGGDgZJ3T34PNc
+Wn7yguHcgWb+P5iycXxKNX7Wz6sT/8mnc9W46VwnGuhNVr4YNxdeeB5698mmj1auRoUEj2WiJHx1
+ICXNVPyV1vM2MXC66jMKEUWFiaPK/+6i4ZHNHBu9Ku8pKkEC1Aa7bWDEJQ7vv/8Bnnn6OYjEEddI
+jB4XVcyPzz8XW7dsw9ZtWxk6i0PsjuVIXvUxCsdeQhFLrpZ5JLI1iBj1Y6N89IwMXNnZAu+MY9uA
+6JooNrmHG4+ROJKaQ3PMIkb7l1TbiJ97mdg7tkc0ds3/Anv25FLkiM/XvsEhLyFcmJLSDbfedrMe
+Lz5ZcXGx5t6Y4HCMGhcyobLibRTHfhpBjP6+jUiUxPy6oBLlfEk50UFY8aRe0ZjW34t6LqhyokOy
+CMVCFXEqBo7ow989/HsS8iNN4hIiVlRUcQEGcMutv8KPfnQ67r3ntwgSWPfQzZLAfPdF76Bk8EkE
+PwhzVdcgjsbps8d60SdGpt92oLv40K3I0IaOtKJpnNzhCS4MYQLtd5LCqIwQxs0oYotqnbiGhSm9
+P/ka3lAtX1iMjgOtTdu9EI4TTrz2Z9fivPPOVT1YWLhPiSVElH/FVxOiys9CUDF4mo8ZWwNMt+fz
+ifPflgroaEkL7XmqL9qD6cmVcPn5BUWh3GvhwkXkwFj06dNbF5aI0n999G/E+GLgiXSrP9m3bzau
+mf5TTS+Z9pPpmgDmZWKYXLQ+0ovo/C1IWvMZCiZcwUXjx4NHe3FKD9tKNYahsboPfhyoI5tZIXEU
+FWczTfG7QopX1UPh3Iomv6sBy0oj8H2/KRi8ZgX1DuE1D3VGMyxVuFAmQTjMTYf/V7+6kfjpWcjP
+z2/000QvaT0iiSlcKlascEApIbEkcqyLDriMTeVBvEkjpzHUZgd5w50Xea7IGGQVr8c/b7wdZedf
+gOtvvBHvvPMuVq9eg7vuupP37YbXXn0Gc2Z/oEaOcKdY0G63C3ffcxeC5Njbb72T6FMlMxdMJoMO
+QfwJM3Zb9gEKhpyG6UclMYbZEve0F3S4j9vWcZ1mCEjy8LObWYkk2QESgupg3eijN8btSKSjz8Ke
+qiKGqZ6k2KKelQCy9fdacmDP9J7onpKM0047BWdQJImlKsaEHVMUDtQ0DX6EO4Rz5RgnRZpEPGJj
+XWggeD1jSx3yBdfU9H5bcoQ7LTQzmEZCrxCuz/+ODSTcz2+5TX3Chx58BCNHjURaz1Q1dlasWKW6
+UJ5P/EfR6X379uanD+67937V5xKBaSSixWkNHgbDczbhwrKFeGzkVJNzeBj0YvM37JSQQ+KdOLW7
+E28xq03jiOEMAbspSkOVFcgffzlcFfvQ8z+voFbSK7iSGyRIzJV600034PTTT9X0DOE2AZ+FYLLi
+hWgVBBLsoG5RUZEaHQLXOUVUk5i1VRXYHXCaCLzoRs1ECEdqNHsJOZ4TPbBwFeqXzMUNd9yJEcOH
+4ZKpl+uau+KKS1FDiVDjCOCii87XpK8xY8fghedfZBrJJn1uUQsZmRL1aAUDWupaOLKBoHj6+nlI
+DJ5HyXHo7kZrMnRKSOHAq5gtPWcP/Skuek1ZbI+Ysspktcnf+eDHJtVjF8XPnsk3wF1bhV7LP0AV
+DWU/V3JWViZGjBiuVqCA4kIkIaKsfAlPCReKHhQCCpcayzCgIk1SIP2MScbEROPfjDXuEWtMwm2t
+wmDtPWZT+Mj4c/E05H7em1nnt/0Kl/38F2rMbN22HVMvvkB1tiwwEfknTZ6IQYMHKrIzdOgQrFmz
+FhdceL7+fdmy5Xy2A0NF9rLyEBFavHItvt+8HYOHDDpkK/UgCAmczKzvU3sG8BGTh0MECQylbHI2
+cYApAOXvRCykHcnbE2Kxkbk9UxcHseNHd6Jveg9EzX4ee8srkZExltZnNHXQas2tEQKmEnAWosnH
+Nmqai1ZbL2kCFomeu78cb2yXtWj8xo7EfvMX1/CyeBryP66BiXG1uP7E0cgd2AOP/uExzJ41R12M
+40+YoItK7itW9dtvz8SLL87AjTfeQIIOoHuUhZNPmYzPP/uc0Y+tDHLHtLN2mAcsUCPzccXnFEIe
+7tE5RwquSJFxfb9IfEKuDJLTpEOFAaJbD8v8I8z5C4Zk+sSYz8ujq3DtKuCLQZcia/g2DNu+EFPO
+ORMuTtDQoUOViJuYbCy+onChcKlwqPihzUWtZAOIgSGuQGKsDwvKXVhRQujJCn53ZXLU4+D/3NT7
+vxjiQ0R9nerEmYTZ4uMTkJrWgwZVknKbLCZJsfxs7jyGsPwYTK4UCSGhrGXfLcObb76jWXuCXLVX
+Imi7S6u4cK8K0XoNy3AM/406JKTqal3pIZzK4przswJ4lw6/LGe7wU/Llc4z6OyOTHbiun4GsZBx
+cbaPHOTHtcs82HXaHfhp+lU4bWQy9jOxKtIbo2n8svKFUEJIIawQTCZLdKKEjoToYugE+IkhJ9cy
+i+39AsnP4QN2OTPCWoJccGOo/4+LqqaE9eIW+rBDhg3Fp598SpH5Y5x88klKQLFc33rzbaxduxYJ
+ifH44ot5SKP0EFhu167dagAJx3VW5ynvsmvnLr5rhcJ5h3N0SEgjNM3/pXnF3UQ85uUFwewOrX0/
+4ME5PxEk8j3DopAS5VLYyb7GhXS03RE1uHqpF49VDEB8AZOKl8zCnE//g7sf+C1Gjx6taYuS9SYm
+vZOIvYhY0U29s3sjQOtUDAuJZbpI+PVlIXzEoLa6HLrUwh8KxYly5AK5qjfze5ioG2RWhGC7vXtn
+4dRTJ1P0Z5A738M/Xn8LOXtyNIIv/mQ9QfmZM2ery1TLiIhwocQhOxsGlXLRPy7SxfF/lZCtH25k
+IpNxB0bi/lU1mmNzgCdC/PDcbDfOSzcsotKLL1BDUekll52bEYV3+c5XLKjE7d/7cFnisUwcfgd/
+euQRPPzEk8igOyKrVWwWcS8EwRFEp4qGjfycSHFby9UfzVygf+UA+VVcUQQAukJE806iGyMwKB44
+yVfJ2k0mi5XvMxVdSYkYNmwYF00VNmzYiFWrViO1R3dEWK6NiEQhnBDGQI9miDoQQEC+F+40orTl
+EhNJI6JaUkL69evXGe279PfOdWSry9000ItP84P4lp8WmCaNhgQaOPcM9ZLzbDfFgVd3+PEOobPf
+H+3D6G4eGk5RmH2SA9csrMI/Kgfipw++jfGbPsJNP52Gsy6+DNdcM42mer36aCLWRW9W09AQdEgw
+WA/1YVnIhY8L7MQmk7TVFWLqsWTIMxIDGqnxUzZ7ECAiU0ZxOY+Afabebw/BfoEKJauvud/XGh4U
+0SqLIzU1TROwxNIWV6Q1Eibn1dRUawDgcI8uEVKmK4Ec8PhIL86dX27K6kTmyqClOp091jQkYznC
+cvxs1jx+Rr26lT7fs8d5WdDKUrludGdIzJ8vrsKrRfEoH3Y5um3cib3fr8bXX39NOKyvxv1kMsVi
+lEn0cwIkCiJY9ns0upYXC0BxkMVDNHKSvA4cW5uLKn8ak6VS1LB6/PEnMPfTz2nEJKmelhRLSZIW
+40p+b2vU0CXqx5jkeT+eQsNtMCMk6QQT5uCvM15SI6lF2JS+m1xLAuWHe3SJkHYEXrLm7mfk/Fff
+0WIUolF/DCWaf6uEfmQdqm8u0XkHfjMsGlvYo23zvhAupkh9fFQ9rh8Qg4FxHswYB4z7rAKzNgPj
+z38I40Pr8ce76XPGJ+LJZ59BNB3taCY3SQGO1G8EqSfriYHOzOO6sUrUwnQdW84bpceZaexhwDKH
+fURjvEkpdCv+is/nfkEJkKIOvkCHEjQWeLCkhDk48l7C+QLnWoaN6PB4Gi0nTjxe6zAzMtLp3/pR
+zNRI0fUHWqZGbpTSFjjco0uEtF9GHvD6AV6sLmHEYVMtGxdE4D4SLC1aDByrb5Tl141NjsS7J9Id
+WVKNRSzJu2FpjdaK/HqoD2/TLy2TZGWqmkW7yrHO2xtjL7oDoY/+jK2rluHU8y5EDcVWeXmpGhlx
+5P6VxFW/3EfRfRAuR+PkMWttgrMI2Rn0W1lfIuJQAsV1RJzKmY0gxtYJTN+4+eabFIpbtWoNkZwZ
+KubFmhZjRYlJvSjictE33+Ldd95DMuHGMkZHhFAiUVoPQ1h28ODiONyjy4TU4DbnXkrIHmUqxEbC
+a4vyBPUxq822Id/aWUOuc+FoitqjEiIxa6KT5QdVeH1rHR5bV4v5jKisYxZ2vbyc6pMgKpiR/lna
+KZh0wwhEDuA1C3JQHxXLSWEZMCfbx/TCD9ayhJyVYO1nLXQyRUyi6uOuwtHuCnhis7hAzFNfddWV
+FK/51HPd1U8cMWKEEkNcnvMZY1zMVBUJyU06aaISTdylU045WWs0X3vtn2rsCIHtsFd7fqK+KY2i
+wz26TEhdU1aYKIXW48tjY3Def8px3TdV2iDimj7R+IzJT9O+qUYqIznPj/HhLOrFVLojL4+JQ6a3
+Eo+sD2DJPoHVeDEBF/heMeS2l8ZEYTXLCh7fkoQLN7LuJLUYV2SWoQez06rKq7Gb4aWP9osOlgBt
+K0SpUxkrUI4557zUBvRN8qIqUKeO/Nat29TFGEsMNTo6UrPaxboU/WxSUyIYlvKxfH0vgYo4pnJ6
+tGpaMgZ+Mu1KxYo3M69VFnEBk7DEsm4XFOcjiMtyuEeXCdna5xjEKOmrx/tw9pcVmE7iSUuRFeyO
+wSQ07K524OKvq/DrYfW4Y4iXJSQRyPJZDYjsxknCydR3V7Lm/pJeXn6AU1Nr8Ju1DAvtSMRiRk3u
+jWDDWvYSeGNtGVbvI3e2amLUmSNuRAUfiGtH8pAu6RvLyWfA25uA996bjVdeeU0z/EylsykB6JlO
+I4gIz5VXXY6VLFkQcSsZ7l5vFC6++EI89+yL+Hbxt7j4kovwozNPwzU9p2lYbhsxWsk0ePnlV5Tw
+reOmst7spObDScyDIGTT7dXh5yofmxyFN48HLqUx89oGcgs7OTmsK0srkvtW+WnwNLAw1oPHpJ7E
+LmcXRI/ITCYTCG4dbOuUEHvvcLJ4/LeMg763sx5LSiJwXVYQ84qJZXIxqLvRxJBhzIcFHdLpn9TD
+gyG+WmxnKfhcOvzPPPOcVn0J7quRFQUi6rBp42bq5wDDa6dpUHk4IyLCgeJaSM1lao80ZGX3UoNm
+0KDBCl5IGGvChHGa+fd3Lo7WqZtmwYU0Xnm4xyERUh7GRm9OS4vCP5gsNo3+IZlSu3QoeCLJAdSB
+rzMM9g57nQoZxWVRzEfei1xw82Av6+VNqrxw/C46+n/ZbCVRkb45VQ34zTpznsky6hqWo+nGvLSD
+Iu2CdGbisfRg/oJFzO57h9EcJ+IoNm2uluPE1RCiitjdtnW7Wq/ihmzdulVDbOJWnH7GaSpmdxJy
+e+21fyBn9x7l2oumXohFixZjN6E7Ec2thxhHyclJh5uOnfcQ6PSOlnUqx51JYr5+fIhpHnXYWyeR
+cRJDNAcfPuRuYJ81MWyEXlYWuuKyLkzr09zCC+E5EnELy+/sDhiqRxvL1eSSpg7TziBv7qu1BQzo
+ouGCGULDq68/H/c/8yT+Pe8rhfu8NGia1KtdccxMGzGMScx3352F+fO/pgE0CEcdNQKnMX7q8bjw
+5fz5JPI24q/rsJIBZ0k/EcIJEcXCltoTsYbFyhXiyUIRDvXwmBS6OId7HBJHttUwRNo63xO5Er/a
+Q1yy12DW0rHsW+OUpkBWh4S7+J1MlqQdJlHn2Q1I1pfVssJLgtiW7LQp09hXk0eK/SGGXwR/kF7h
+mvUlLGcxdetZkr+x9vK4pAi89eyT+ODjz5BAQN6e4KbDm5aBXk4EALP2CvIL2ddnNxYsWEjAYoHi
+sBs2bMBquiXRFMni45r6zZCKWCFYGvNx09PT6bqsUmKKyK5nhEVqOlPTUg83HQ8DRx4oPNCnbBv6
+vvceci68H37mdIL9AIQjWsAcFL8npLlwAVNJRKTabsuzm2rY4FbSNposO1sdql4kmuQgMH8coxY7
+KoFCaXQncUXpYaC61+qM0eq5ohj2qvl2Nr6Z/xXiWAXdWEvZScqFFs7SSo2iNStcJ/HExYuXaumA
+pmi2AgeFK0VvClIki0Dgvm3bdug7yvnJzBSUpOvDPQ6JI9t7mBpPLJIKtsDz2i3InfoASgZNRKim
+glajhE2MbpRE8F+yVVmUcJROJrCkKIg3pPCllbOvfCL/oyjO9BEtGh6FS3tHkZAhvM4OHf/aE8Qm
+TaTmRQ7IoJObsU9BcS42zXlVFLaKTGVrSUnpJC5oxK7hVNGdAuLbozOEV3oaHDfmOJQQINhPI0lA
+9Uxys8RaD/eQN9LYoq5jmYcOkqvCvbl4FHk0WLo1FKDPG3dhzxk3oHDcpZw7Kv9aZuSRnuewV9uU
+dNGNhohBnvQkC4G0uFZSWmzZJjclBCii9JxMNztpRGMki2VljOB8PHG0G7cNDkJKBR5cV2OACblg
+c6uWKRgx3y+AI3cbOy4xOUpO1mPMQbb1rT+1sRY6I3bredEMBhLdtE7bg6OY0vL11wvVtRlBPdsc
+dC9hxCiBQIctSfSJGh+iE9PcWmSiWgRTUwdfA8W2ngmXYu0cN+bYY+hbnc7CnaVwsRIp84PH4S2g
+033ajQjG0GKrK2XmAMNBKj3Nw87ND2AO+9HYILyddCVc2J0tx+4aFYmfM72+ebGLhMgk6CzQ4LX9
+2PWYUZZtbPjg4HrR9yGQr9aVk2mLRTna9sQRKNesuQYnSwCdPFBL3puUa2uG7kogvzXBXdLcgnUj
+sXEMnlO1SErnmDHHtpi1u1dVanPix4+ONUykNODHKoPoiBT2YwsTqmbR9dAJ8btCW8kom3jiCfjk
+33Opj9hek25DyjdvI7JgO3LOvg1VmSPw3HbW4gfLcScx1zQS6s9sjxaUKmnt1Sa1iXwy0uE09nd7
+iNVKYxgCM8N0Z/7LJj+3JnLQ4jVAvZdiVXr+bCNAHyIMF0m9+UsW4uznQvimkFbwhMtRkHkM4rct
+RmLuesQU74anulTnrIGEldIz6SrS1MGray5OW/OjBT30LeUjebhJjKoMHkwD0HqP3ezB81EuLXz6
+zPv4nFKqMIjBBB1h0MM4DOZAl7zJ2tI6xU+Hs3y8s3ZpnRHUhqYGDBiASZNOwPLlK1mW5oLLl4Q4
+NkQa8PcbkXva9SgcfT7+vMtBALwMQxOc+I9kswvaIw/Cl0qk1L1zSBQD2V54VWeaJbeduvDhtQx/
+sVX1NP59Wh/z1tEkZB92KP4qn9egg39mTzf+SCxYRi4nbElpLOYW98LCfZOwp7AU2/buRHTOGiTn
+rkNM4XZEVjKwXF3ByggGh1Xs0pIWwtLPDGlvFUtcK32bz3JbDo+ZJYljClxnWqo5cRJxWrFubUot
+JCixV3Yu4OJ9lY0jPmMTxauyPTg/04OBTEONa6vOpRkB6qjn84g7l1H3klekz7gT7+yqpmjy48Tu
+UczPcel3LYZwu8phw8FmWi1XoNl39kpKYKT9oosuUBP8jTfeotkdh6iYRDj9lcia8wfEbvuOBL0B
+a939sHY3DSGrh4/YnZPJhQ8eJS0+7SYTZrJWFAcw9etKbJO+blxx0tjQEp769yxWkNn6ZQB7uVUQ
++ovle6QzeHw+cd/ze4a0nGF9ZQq+Kk7BgqLRWFlUjZyiEhpD+Yjcvx2JRTsQU7STrWNodbJbljNQ
+hQj2sBPjyEg8y5VSWkqZmnxn6VtLPQtEJ91Y5Xgnz9uw5BvtCXTZ+edYU9qAUi7W2bk0CNQ14vm0
+0vcyKPLoOj/butSQM50YwsZJ/fkePdkiRZBNOUxsAE4DI0iMyrBp8T6+4+8ZH3ZV0iSOJSfcOjiG
+bB7AayTm4xvqMYYN7SalsTlBN5f2Ipfeo80NIZuUppWqmehm7YKQlZaCjYTmxtBqK2J8TvywnTso
+zpge4XZ4kLzyE/hy1iN/8jXYN+ocAgY0QpjmMTLJgZknxrDXeXOD2nBAJkXwdbR032D4azUzFESM
+VlIExyluC6RLTxhtyOTAs+xx80V+HX7Ed5B2YEexjsVHzk6mOJ5INS2fQG9ga3U0FpZEMRsvg1w7
+GltYD5lPzNTJekZ35X5ElhXAwzQQJ10oZ1UpubYc7ppyRJDATsYtI5i1gAZmM0gYRVwsbWlNsJ3p
+IA20lhvYmk22zOoxdgL+WpmGnGWV7F8exHZy0ga7B4/NMfLs0umSEkWCCktESun8WtfVVWNNNxex
+l8HxGWN9GqxXjvyyoJrd9SMwkTjkORnx+JgE/csGP15me65ETsoABo3HJrspep3I4GQK8JzEyfPR
+WhGDRTYcUUyaq0VWTJAvVOrwYUkZW3Fl+vDb396N39zzAFuRcVKYJVftr0aIotZTlo+sWQ8hftNC
+5J10DSozRmAj6/HvZLjreho2aSTMXEZSBnJ1jmFcUxK67uBuNT/tW493dvqxqDDIZrYsc7OKWmWr
+BRcnI0jRV00UaXlxA5bvq8Ez7Gp5ZT8Xnjk2js9qGk/IooykDhtK2FM+6MWVTi65anEAH3Pmg5Qe
+wdhk+DNEp/EltT85iSU7BVD8MhbF71mhxbJ0hxTfyt8s7lJjSvJ61KASw8qNPJ7+xdJSc4yMxv7v
+5ldVdUokATl4P00EVzGoYr6Fu1pbz+iNE38bH4NJ3Y0f7pIOh2f29OHDXD9uW1GBdHa2n85JnHNy
+PLZV1OONHTXaTP3xtX5TP8jjYynTpXOh9GsViDSaTyH1GNLrXNI/tOtViEm9wUHILt6EfmxnIqL2
+jjtv06YQXxHyChLtCLFwJoItThLXzEPM9lUoGns+9tJN+WtuCt7P96Mbrc3vSxuUi24YWKt19hle
+Ntpl+OyGgTH8XVqq2RLBwZpGqgk+Hzc+MJ08BNMlY1fo7gdcstZsySnyrAsKa9GD79ufC0UiMwG6
+OesZRlM9zTI5M4zOPoVtxU7iQi9lWGd/0I3qOjdWlQMbKzjxXEBW65Cmc4Q7hWjyEf9Z/tVcakvX
+2mLYoqtxGIxkaRHNsZhEi4xFN7Ob2ChKSelgfTST4exHdFXRRC/j5F/EENJEUvfpjdWYuqBcCSUN
+4y/JisR1/SMpcigKmDW+gk77EoapNrHxqRaV2kNXjvV0qkg5m3FpWB3lx4Ad2xiATcYQ5rT0YqlA
+BrtDvfb660zdqDVNFejbRdRWIu2LlxBPf69g3CUoHHE6Ct3M/XRVooh64MHVNXhrN7uHsMr3Ejax
+7+NzK0fJRDfwBWWBp9FqFS4u4rYPus2fRYcILtof92IhUDNTcDFzOs+fX0lDChiW5MKE7i41inbK
+5htqH9gTF8JZbGf6yrg4SPy1ceb4wxKumDO+LEcp46R6vxaWpkUhvaexKBpv34x4TRNocWDLCeVv
+siDkEnxXEvH0DCf+OiYWvfj+jUP8SFmJG8v81I81GE/x9Xt2AZ7eL8j9oPyYwY74v15Vxb063DiK
+rCwNInqxq2+9GBpSwygVWi38lhZvog/+YXUSToooRL9e6VqeHUcwWXJHzz13Cj768GPNj9EEKzdz
+clxRiMrbyv50D6PbmrkomXgF9meO4vciv6FNAe9d6Vd/8VKGxC7JjlZxb4N5MTxOiLlWdgswU6eb
+pogFOFa3o7AmlP/OZh+9cq416TOYz1zdL9hH3WwdaBORh3Nzz7MzGRAfG9tIRNt3lWuNoTE2hft4
+vE6LM2QnoTXNbjMatZqX5tTr6Gd9XC4Q4RcuZmmo9NRoH7HpAwE5DShNTmWCE2NPT31frf74VE7Q
+E0fH4G7m4XxEy+oVGg5vC3TG/E89QBWjuUnHowE7XN3w5JLduDmbnY/JgfuL9hFvTGJ8byjN8gJ8
+PX+BQmbmSrT1aBzIk0es/hLnJdRj8pSR+PUWN3vmWH3xuDIFmvv92gD+xnK/37Fo9FqWucvwkBDp
+0lZGtIvtUNM3PSudEQerRbUcV0iOncv0FH0HSXBWVWQ/gXUuifgjrv5XqYdMe2twFwQ/vpMMhpHi
+1pjjr2SC8zs0vnh4xwVO4RKv+UKQW1Baig1y78goTTWVUnV7OTa/pGs7MbFy7pJ2DB3uoyli/sHe
+cvcQbWigyJ3ISMaZnISXxnvZ6RHsFFmvemUjra091Bu6M0IHtNTSOt54QdwITCpeilH1AbYuSWT4
+Z6uWcJ966snYvGmLEjSKsT/ZPkGRFXlYXwL2s0J4UG0Bfco+2FEqOsvIJAc5L0QoQ7ZveonPK5Mp
+3bpk9OdOP41ijIzppX49x0qYttGSL2kkbRaL0QqpNUH2TUQ8u5cTMyjCukWa1T+vwI/rucGLaJNL
+qW5GqX4KYTwzCseyROIr+oDSWL+FUdJl4skJNpmMPkzjwnyCi/Wy7KYedUZdtgRTXb187O9NWf/s
+pkrd3ujH3I/pIj7o2zRyXthag+c3sKCU4mosdcgg+jQjKWJTaLUupI7ZXtUZR/JmQRpJWUMxj2kf
+F7Ik20VrsIT5MCcS+ZFg7dFHj2Q9/ocmB1SpJO9CzrRq9vMik7CzigaIzf2Nc8UfaHStoGV6xaIK
+dm6MomTxYBBBAaGpwLPyv+HdnBjNZzYrwMDcHzEvVlNxrHIDe/qMMUGdyE5XIk6700qW8XleDVM5
+q1DCaIsYQn9YV4U3JrA4lgtBIMMr2ZbzK1r+1s4QB0U+8+pGj7IiQhspnZjq4s51PobfmtdTmmNa
+z7wrQB0ymdnfw9ha8nVmhU9fUo4B1IOygcq/JsWpCf/erhquyCD+tcsybsgRERpp6PiZbWODzhYW
+ufvigW8/x13DyjCKGWp2gei48WPxDdMJ7WRgM6nkdlq148eNQahbKkqq9lv+lH0/a9VyIutpjc7a
+VY9ZOZUYznYyPejzuqTPuvWo57FXjk+51ZwjLVwWSgqDpVhtk0SvzMk7g8D8y7QIDRHFkGKGAg2g
+qURc4ihixbViu3E2E2Y3RyvUdi7v8WRCjVrYplPywQ1dZpR0bsKL1w32sOk9n0PEugSlednmxlrr
+O7j2UbjPza+mr+bG7QQFrupdj5e4aZmIV2GEM2hyn8lNuc7t5datZGUS1gg2aFvnHTyzSbGg4KKP
+FWLL6/cTxyJj43z8lnUPvrReKGLC0/jx4zB9ein+yBZnDQ2svJKcHJlyTnR5KZvOc9eTZuWzNmMZ
+7pK3EzmjUo6bpHAi5WPQeP5LggZ4/90kXhp70kl5oPSY3cXUEdX1GlKzSMl5ODPdiVeoE7tb4lQI
+L/bP1X24IYtCga2HOTeZgfGpNL4eLJZ81YMgpJxicWE/GmYPM8JjdxCT57Mdgo4u7eobSwedBsH7
+OX62ba6mrxSJ2xi1v46+pKQ1vkTL9VlCRsQD0IeQUTdOSG/aFn6KvjLq1o4urq+p5dg8rp4iNiEZ
+f2uYgMi5S6i31iEusw+6pXTX0E7ffn00P0Yy2OSikcwoX8kCmsSd+SRUN9PPzRrGjjHhL0NkK2it
+vcqbupLIcQ8QXXqBuOwINgceyV3yloqTqXMtisYQggID52W78OJxYp0aTtxcTqucxp34yR5p6iuC
+j4tG/GU3E5wTuFhsIEKucSXjo68xs2Gn7EehnoEdKj+Q/Dapzd35f7HjyHg/GejB3TRo+jY2F5TL
+hBdYpMlAPUKwfAAbK3zALdjfImIiewmPZy7N2RQZz4330T2px4dMnPqWsNFybnoiScURuqLbWqWt
+vrPkqz4OnWx/cjqeyDkKG5bOw/N9+6OQ+aRFrGCewvadT/zxT5rv4iQ8py4pERLZY6UtM62pmUkz
+G07vZWcIuNHfVYoT6ndjhzMdC4lUfR7XQ3czYB6kQWcEjSFKMqa7A08f47WIyKx37nFy9TfsT8C1
+I0nRKiGElCLeNF+I/QAoVv82PpYxUePP9WXPnGl9PbpwGkNQcmIL2W39bvcaELSI1xpDY+n2odHc
+tU9Ei4XihDO3zaZatblYiyKKp7Ih4HlMvfg8j5gru0hdSmAghsq8X2IERie68NN+TmxjG+hPab3m
+Si+aLvSzaQyvsVULUrPx7+RpuHFLPiYVrWb4yYnhI4ZhGiuyXn3lVSYrM9+Hk9yD6YeFEr9kaUJH
+bWPbXPOc9Xh/Oc6oXI0TxvTAjmxmuL/6ZyyiGnH0PQo1ydkIJPRAHZvp7qjx4dLlIKZsPu/v4RYY
+dcTtPIIIWZxrx2qtwLUA3Dcz9/bHPdhJmQpZ9n/8SnbbsfKJCLc2S+pq+YQhKZPgdfqwVdr1A6K4
+j5a3cR8sOyvRNOQNg1GsQ6zAsr3oWdtH9XIWI/fy2VhWh8+4teCHe4wvuZ8uiaApfoWdLB1je+Pt
+3VNWpH5MSqJKQVcAvSmz3Ak9MXrUmUhlsrBsOzRu3HGso/iG9fjbNOKdyU3J8lnRjCCNnS41wjBc
+Gs/V+f36XMSs34iFrPLa+9kn6MU2YhFrPmEpAsvYBU+lm+P3JWNdTBqWE1utj0tGRHwSq6fjtNlR
+g4uwEP1ciVlqOEuDB+Lq1uLLtZVYtycOib4oVhhyiynCRDcMdaMnrfqXtlHMSj6RDQYJgcUC41fi
+Il3FhOzL6DYJQmX8Xot11bK2WTl8SoqvqS/dNJpkwSBasvL5JWOCW9k5Y2UJDR2mKcqOAd/TYJAd
+XKtkG14bqbOlnCVORT+K3RHNZ02mbu1Hn2gkO2mNo+81mj5rptVFMhRKYVLTUt3L8a5f34Fbbr4d
+5YyYFDDPpYw1FgZtMWhN2IPoRyGzvvMoup+fsYFZb5sQx+s7SUAJTIsBFlmSj6j9exBDez9F84bY
+vVLijyReg7QfI+hdT8RJMgk0msG/S92jiP8SPtuUs07HLVNvQgL7p0vD6Thygbjrf9xQhUKJM8q0
+aoBcqpUdGE8X7iJChVNoGfciZtx8NGUXhKmyWk0ERWtrqh+4CuQm/akD5DOVHYVlCDy3k0HePGa8
+FdNxLaa8rxG1wwkR61BqORJJxUQ6ybIJQQaJJgB1W9tDyWLq37+fggSS3DTh+PH41+z3FfXZkbUG
+yD6GqJLELMMclq6UYLPkne7n/huSTCxDMQyBvayMADjsrS6MCDX5skSWWI/pCLGZjH4nRDHWY4Dl
+77UMc/2UvdXv+dU0xCULymNWsKgoSd14lLiwykWuvyyK6hNS3cyyZ2eUVHGF2hJh4XNeezNwEFl0
+5qYCqndvc4v1ZsZHm3e1bbWW1pg0fpDsMun3Jk0Yli9ezMSlPPgZozTJyV0Y8og8Z9f27chgvaLP
+ZyVc6XS3GrZIk6+FwHqATIvk2hqrWKUW47ZlbOAUS7F7250/w/Rrr9a23jYRZY+Tm5ZW4m3ChkkS
+duNm2NL+7QxmKpjmgU22qq6LrijAMF69y4RUWd5o53AVcqWaaT7QRGtekdTyPHkRCw5TN8K8pEmn
+T9Y9PeK5VeCMvzyPT2nqVzPU1abp2s4LGreErgJFprgLYRex8dWk6YSkLUrc1CWNHiT1g65PLYPE
+k045Bb/4+TVEo47WO9vaLECQ4BludrOfgMILDIrL5qXDGMhu2rHc8qcbiWmngB46J9pT0GVCNq4k
+6xk6Qhuar7rW51kM0BaP6LNNnDwZR406ClcvD2JOAfVkVxATZSuTYnjAaLbebIy1gULRL30KyGGZ
+rDrOYiXW3u1bWbRaggpvIor6nY6GY87AddNOYAywacpsT1EuOZ2W5wMjWDNyAKcZCdX0tf1Uh4+I
+tgwJg3HDPeTwPlxCYjdkJhHD3FvV2No6nCexhbcRFHYbGTOZdr6RuY5AgdJixYGzTz9Z/dxxrJF0
+d0vBvE35WBTqho2+vgik9tcmFOViqbexMiTqkk2Mt+1xeOekvffvMkeGM5GH85hE+nJdT+0zpBRL
+U2kpDjgvI/0AJGQm2qGBcVAvMU0XReckVh6PnjQZX+0qwUO7PNhd3h3VbLEm7klIuh6zOVM9Q18V
+NZIT0iop7XC+7CFc64gnZBot3YNwqyQXkcgXE5lYTVxHIkg6Ym/6pcUl3ChbrORhx6IqKR3VqQMw
+Pz4Tz++NQlUyk4czad2qkqVmZbKVWRHG2tWw3RE6jlxCGtNOdwTSbSus38OeRxarJvfMwPEnTmRe
+rQfZLFa94orLWFmVR0IScowcimdzvfCz5WZQ+uSo7pR8Hf6sMa6WIvFwJ3GH/R5hHnjkElLnkTCW
+JFQR79zfhJmH8Wo8mQlfI8eNx19unKxWsYfxThnir8p4ebmf/WCJs0W2FbFordeMZe35H6j9D+Nl
+wjrkyCWkBc72IiGzGdjez8Sozjabbnpj4Shm8tWx4RLL31qbIaJBy6qFC8WtCc9H9VCfxmoH6SNz
+HLmEtAB5SagaQItwOXePDX+Qo2jg5DEOuY/6URAl5W8jrRlnZUNgyT8KK3wjZ3IrJc6UZFAcqeOI
+JaRB/81kH8tg6FvcskmGcR/C4AwSbD/hw33M67EJaftykva4XYLLzeyoDglErFSIKInZR+o4Yglp
+iGgIKds0SeWVpN6bBvkdD7VbhJDEg7czzWFYq70tNzEHsliqosXHDOdiPDSLScg9ZOe7I3QcsYQU
+AtrCbxgzE4YzJipZfKEwNmhR4lCnSex4GXNcp6S3nP1viqQLM4/SjToPhBZbHK0XC2keU1PXyyOP
+mkcwIRsZkpGUCPbHcSshwxkmXVBih6z9YB6quC6yRZSMSkZpvmI6pBBQ8nG0UWAYFx3CNJEjeRzR
+hGyO1U5hRdUzzL2ptHqqdzT5JoJhwP113Hgth3HTbKvj1jqWPaznR5KvrPZ5HdOHYjWKCMIIZrQf
+yeOIJmTziRvNvYfPSHXiPdZ/aAZch2xkiChVTdJs6Vvm4GTLFkf88iPmJVVKBmC4GQdcOH0YDB/C
+0NSRPH4whBTReIXuPyK7qIp70T4lTS2+MXgEY32fG7xcmgWmcNazaa90Xu4CSSjNJ3HXPmP5in/a
+lZO7cJ9DPPQHQ0ihzClM1TyxRw2+3Gt3xWqbmE3f8icaR1+wKHYXswTmF9Rhs3TU6nAXdHO2ujmk
+GzM+WAreMjAcvv95iNTpwuk/IEIyNZFGz61st/11YaUW1equQJ359WSkYvqSM1l9xcxHMlVnlmqz
+fFTm20xgGbzso2lp3bZjnF2Y8P+pQ39AhDRuwhk9o8ghtZjJJoUhijvz7YEgd4sJo678O7PaHmVF
+U09msGkDhvbe3Pb5JRmdi+AGpiuazToPf3rG4STqD4aQpp+dlJhF4LfDvVjI+vo8wmxSkdypqKOf
+8T1rWBYXNZCjPbh9GYFyAcDbAmpEt8olpTaSRbWyz7JyowUZmlOOPITnB0NIux+4TKMUHP12eCSu
+Z590Y3/YFTkWmNpqqUvvuhDF8gwmRr11ghcXkUAzZUchhdxs0M9O/CDR+KeexHcf5EbW0vK7iXRH
+HgHtV/3BELK1GJrOLZtW0HB5ib4lmNFoYLm2J1r1KN+0mJDdIyyQffbYaE0e/k6qsiQTUNFAsYT5
+jzbSCOF33P94hNUqzdz7yCWiPN0PlpAiYh9jR6ztbFgxL5cZpcpdJi+1ZS2/4TljgjrwNVu2vLDF
+iRdIzMsWcBsLVpaFiKFqrqtkWtPAuXMEGzGxKOeHNH6ghDSwWiLL2aQ5/kULKrh9sEAwrRsyGFLY
+7ViUqeh6vEguzmADqlcnsNXLokotFxTRK7WJP+OWUQ8M9xmBK02SlMuPbG78AXNkU6JjFmsn3jg+
+FlezanlhAYnJxGk70NWUMWd8Q62pEMLQm/jNqgAeHhXBc3342eJqrKDxdP1QdjUZHau9CFSYmm5Q
+P4jxA+XIlnPbn/WEb5KYNy+rwmzZrFQgPLvHkK37hJaa58wfxEDi577vKhEcHc1zfVjOAtgLuKOe
+TcQfBPWaPeT/CkKKnM1kUYwQ85GEajzzPRtcSO2hhLwkkUoKcjkiWQ2azLhiFtNHhrC35ihGNKSY
+SLZ3GhhnOkg1iuEfGCX/VxDSKs6mAerEQyNi6fvV4BYmV61lC47jWEQ6kp2iRjCFvz9jitJQSepW
+pHNzc91nX+PI14Ztr7D/A3bX+F99bi34AAAAAElFTkSuQmCC
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0
+Content-Type: image/png;
+	name="image005.png"
+Content-Transfer-Encoding: base64
+Content-ID: <image005.png@01D6D494.9AC1AA80>
+
+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
+Hyf6kniDbNSnAAAAAElFTkSuQmCC
+
+------=_NextPart_000_02C6_01D6D494.9C5012B0--
+

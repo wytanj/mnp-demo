@@ -24,10 +24,9 @@ export default defineEventHandler(async (event) => {
     note: `Delivery signed off by ${shipment.signoff.name}`
   })
   addEvent(shipment, { type: 'status', status: 'delivered', actor: 'system' })
+  // Ask for a review — unless an open claim (or an existing review) says otherwise.
+  await maybeSendReviewAsk(shipment, 'delivered')
   await dbSaveShipment(shipment)
-  const email = buildReviewEmail(shipment)
-  await sendEmail(email)
-  await dbSaveEmail(email)
 
   return shipment
 })

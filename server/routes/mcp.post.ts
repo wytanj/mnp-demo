@@ -1,5 +1,5 @@
 import type { Shipment } from '#shared/utils/shipping'
-import { STATUS_LABELS } from '#shared/utils/shipping'
+import { CLAIM_LABELS, CUSTOMS_LABELS, MAIL_FROM_DISPLAY, STATUS_LABELS, customsReady, docsDone } from '#shared/utils/shipping'
 
 const API_KEY = process.env.MCP_API_KEY || 'mp-demo-2481'
 
@@ -29,13 +29,39 @@ function slim(s: Shipment) {
     quoteLumpSum: s.quote?.lumpSum ? `${s.quote.lumpSum.currency} ${s.quote.lumpSum.amount}` : undefined,
     documents: s.documents?.map((d) => ({
       label: d.label,
+      category: d.category,
       status: d.status,
       deadline: d.deadline,
       by: d.uploadedBy,
       note: d.note
     })),
+    documentsComplete: s.documents ? `${docsDone(s).done}/${docsDone(s).total} required documents done` : undefined,
+    customs: s.customs
+      ? {
+          status: CUSTOMS_LABELS[s.customs.status],
+          declaredBy: s.customs.declaredBy,
+          declaredAt: s.customs.declaredAt,
+          permitNo: s.customs.permitNo,
+          clearedAt: s.customs.clearedAt,
+          note: s.customs.note,
+          readyToDeclare: customsReady(s),
+          howItWorks: 'M&P check the documents, then an M&P customs officer files the declaration on TradeNet by hand. Human-in-the-loop only.'
+        }
+      : null,
+    claim: s.claim
+      ? {
+          type: CLAIM_LABELS[s.claim.type],
+          status: s.claim.status,
+          note: s.claim.note,
+          openedBy: s.claim.openedBy,
+          openedAt: s.claim.openedAt,
+          resolvedAt: s.claim.resolvedAt,
+          resolvedNote: s.claim.resolvedNote
+        }
+      : null,
     signedOff: s.signoff ? `by ${s.signoff.name} at ${s.signoff.at}` : null,
-    review: s.review ? { rating: s.review.rating, comment: s.review.comment, rewardSent: !!s.review.reward } : null,
+    review: s.review ? { rating: s.review.rating, comment: s.review.comment, helpedBy: s.review.helpedBy, rewardSent: !!s.review.reward } : null,
+    reviewAsk: s.reviewAsk ? { state: s.reviewAsk.state, trigger: s.reviewAsk.trigger, at: s.reviewAsk.at, reason: s.reviewAsk.reason } : null,
     timeline: s.events.map((e) => ({
       at: e.at,
       actor: e.actor,
@@ -59,7 +85,7 @@ const TOOLS = [
   },
   {
     name: 'get_shipment',
-    description: 'Get the full status of one shipment: milestone timeline, document checklist, quote reference, sign-off and review state. Use the shipment id (e.g. MP-4471-AF).',
+    description: 'Get the full status of one shipment: milestone timeline, document checklist, customs/TradeNet state, any open claim, quote reference, sign-off and review state. Use the shipment id (e.g. MP-4471-AF).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -70,7 +96,7 @@ const TOOLS = [
   },
   {
     name: 'list_pending_actions',
-    description: 'List everything currently outstanding across all shipments: documents awaiting upload or verification (with deadlines), deliveries awaiting customer sign-off, and reviews awaiting reward approval.',
+    description: 'List everything currently outstanding across all shipments: documents awaiting upload or verification (with deadlines), customs jobs awaiting declaration (an M&P customs officer files them on TradeNet manually), open claims, deliveries awaiting customer sign-off, and reviews awaiting reward approval.',
     inputSchema: { type: 'object', properties: {} }
   },
   {
@@ -109,9 +135,9 @@ async function callTool(name: string, args: any): Promise<string> {
       status: STATUS_LABELS[s.status],
       route: `${s.origin} → ${s.destination}`,
       eta: s.eta,
-      documents: s.documents
-        ? `${s.documents.filter((d) => d.status === 'approved' || d.status === 'waived').length}/${s.documents.length} complete`
-        : undefined,
+      documents: s.documents ? `${docsDone(s).done}/${docsDone(s).total} complete` : undefined,
+      customs: s.customs ? CUSTOMS_LABELS[s.customs.status] : undefined,
+      openClaim: s.claim?.status === 'open' ? CLAIM_LABELS[s.claim.type] : undefined,
       trackingUrl: `https://mnp-flow.vercel.app/track/${s.id}`
     })), null, 2)
   }
@@ -138,6 +164,25 @@ async function callTool(name: string, args: any): Promise<string> {
       if (s.review && !s.review.reward) {
         actions.push({ shipment: s.id, client: s.company ?? s.customerName, action: `Approve review reward (★${s.review.rating} review received)` })
       }
+      if (s.customs && (s.customs.status === 'docs_pending' || s.customs.status === 'ready_for_declaration')) {
+        actions.push({
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: customsReady(s)
+            ? 'Customs: ready for declaration — needs M&P customs officer to file on TradeNet and mark it declared'
+            : 'Customs: documents still outstanding before the declaration can be prepared',
+          documents: `${docsDone(s).done}/${docsDone(s).total} required documents done`
+        })
+      }
+      if (s.claim?.status === 'open') {
+        actions.push({
+          shipment: s.id,
+          client: s.company ?? s.customerName,
+          action: `Open ${CLAIM_LABELS[s.claim.type].toLowerCase()} — CS/claims to resolve${s.claim.note ? `: ${s.claim.note}` : ''}`,
+          openedAt: s.claim.openedAt,
+          reviewAsk: s.reviewAsk?.state === 'held' ? 'Review request held until the claim is resolved' : undefined
+        })
+      }
     }
     return actions.length ? JSON.stringify(actions, null, 2) : 'Nothing outstanding — all shipments are up to date.'
   }
@@ -160,7 +205,7 @@ async function callTool(name: string, args: any): Promise<string> {
     const email = {
       id: crypto.randomUUID(),
       shipmentId: shipment?.id ?? '',
-      from: 'M&P International Freights <tracking@pickletour.app>',
+      from: MAIL_FROM_DISPLAY,
       to,
       direction: 'out' as const,
       kind: 'cs' as const,

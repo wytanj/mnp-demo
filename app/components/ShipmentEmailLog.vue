@@ -35,8 +35,15 @@ function kindLabel(e: OutboxEmail): string {
     case 'reward': return 'Voucher'
     case 'inbound': return 'Inbound'
     case 'reply': return 'Reply'
+    case 'message': return 'Asked via tracking page'
+    case 'status': return 'Status update'
     default: return 'CS'
   }
+}
+
+/** The customer's own question from /track — call it out, it starts the thread. */
+function isAsk(e: OutboxEmail): boolean {
+  return mailKindOf(e) === 'message'
 }
 
 function matchLabel(e: OutboxEmail): string | null {
@@ -97,7 +104,7 @@ function when(iso: string): string {
             <span class="pill" :class="mailDirectionOf(e) === 'in' ? 'pill-amber' : 'pill-blue'">
               {{ mailDirectionOf(e) === 'in' ? 'In' : 'Out' }}
             </span>
-            <span class="pill pill-gray">{{ kindLabel(e) }}</span>
+            <span class="pill" :class="isAsk(e) ? 'pill-blue' : 'pill-gray'">{{ kindLabel(e) }}</span>
             <span v-if="partyMailbox(e)" class="muted">{{ partyMailbox(e) }}</span>
           </div>
           <div class="subject">{{ e.subject }}</div>

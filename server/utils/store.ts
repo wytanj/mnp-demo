@@ -1,5 +1,5 @@
 import type { OutboxEmail, Quote, Shipment, ShipmentEvent, ShipmentStatus } from '#shared/utils/shipping'
-import { STATUS_LABELS } from '#shared/utils/shipping'
+import { MAIL_FROM_DISPLAY, STATUS_LABELS } from '#shared/utils/shipping'
 
 export function newId(prefix = 'MP'): string {
   const digits = Math.floor(1000 + Math.random() * 9000)
@@ -22,7 +22,9 @@ export function addEvent(shipment: Shipment, event: Omit<ShipmentEvent, 'id' | '
   return full
 }
 
-const MAIL_FROM = 'M&P International Freights <tracking@pickletour.app>'
+// What the customer and the room see on every M&P mail. The real Resend send
+// uses RESEND_FROM (verified domain) — server-internal, see server/utils/email.ts.
+const MAIL_FROM = MAIL_FROM_DISPLAY
 
 export function buildTrackingEmail(shipment: Shipment, at?: string): OutboxEmail {
   return {
@@ -92,6 +94,32 @@ export function buildRewardEmail(shipment: Shipment, code: string, at?: string):
     ].join('\n'),
     ctaLabel: 'Book your next shipment',
     ctaUrl: `/`,
+    at: at ?? new Date().toISOString()
+  }
+}
+
+/** Status notice — customs cleared. Declaration itself is filed by a person. */
+export function buildCustomsClearedEmail(shipment: Shipment, at?: string): OutboxEmail {
+  const permit = shipment.customs?.permitNo
+  return {
+    id: crypto.randomUUID(),
+    shipmentId: shipment.id,
+    to: shipment.customerEmail,
+    from: MAIL_FROM,
+    direction: 'out',
+    kind: 'status',
+    subject: `Customs cleared for ${shipment.id}`,
+    body: [
+      `Hi ${shipment.customerName},`,
+      ``,
+      `Singapore Customs has cleared ${shipment.id} (${shipment.description}).`,
+      permit ? `Import permit ${permit} — declared on TradeNet by ${shipment.customs?.declaredBy ?? 'our customs team'}.` : '',
+      `Next step and delivery status are on your tracking page.`,
+      ``,
+      `— M&P International Freights · Moving you forward`
+    ].filter(Boolean).join('\n'),
+    ctaLabel: 'Track your shipment',
+    ctaUrl: `/track/${shipment.id}`,
     at: at ?? new Date().toISOString()
   }
 }
@@ -238,6 +266,47 @@ export const RATE_CARDS: Quote[] = [
   }
 ]
 
+// Unmatched clutter on the shared CS inbox (shipmentId '') — proves the fold.
+function noiseMails(): OutboxEmail[] {
+  const base = (id: string, from: string, subject: string, body: string, at: string): OutboxEmail => ({
+    id,
+    shipmentId: '',
+    from,
+    to: 'cs@mp.com.sg',
+    direction: 'in',
+    kind: 'inbound',
+    subject,
+    body,
+    ctaLabel: 'Open M&P tracking',
+    ctaUrl: '/',
+    at,
+    delivery: { state: 'simulated', to: 'cs@mp.com.sg', detail: 'inbound' }
+  })
+  return [
+    base(
+      'in-noise-pickletour',
+      'noreply@pickletour.app',
+      'OCBC PickleSprout 2026 — court schedule update',
+      'Your court allocation for Saturday has moved to Court 4. Do not reply to this email.',
+      minsAgo(95)
+    ),
+    base(
+      'in-noise-newsletter',
+      'newsletter@freightweekly.example',
+      'Freight Weekly: rates dip 4%',
+      'Asia–Europe spot rates dipped 4% week on week. Unsubscribe at any time.',
+      minsAgo(170)
+    ),
+    base(
+      'in-noise-vendor',
+      'hello@some-vendor.example',
+      'Re: Partnership opportunity',
+      'Following up on my previous email about a partnership with your logistics team.',
+      minsAgo(260)
+    )
+  ]
+}
+
 export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] } {
   // Scenario 1 — B2B freight forwarding: Allmighty Foods ingredient import,
   // container ex-Busan discharged at PSA, customs cleared, drayage to Senoko
@@ -261,13 +330,22 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     weightKg: 11200,
     description: "20' container TEMU 482391-0 — konjac flour & oat fibre (ex-Busan, SINOKOR)",
     events: [],
+    customs: {
+      required: true,
+      status: 'declared',
+      declaredBy: 'Joreen (M&P Customs)',
+      declaredAt: minsAgo(60 * 6),
+      permitNo: 'IN-2026-09-044713',
+      note: 'Documents checked by M&P, declaration filed manually on TradeNet'
+    },
     documents: [
-      { key: 'bl', label: 'Bill of lading (HBL)', required: true, status: 'approved', fileName: 'SEARASI-HBL.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 24) },
-      { key: 'noa', label: 'Arrival notice', required: true, status: 'approved', fileName: 'NOA-OI2103.pdf', uploadedBy: 'Consol agent', at: minsAgo(60 * 22) },
-      { key: 'permit', label: 'Import permit (TradeNet)', required: true, status: 'approved', fileName: 'permit-MP4471.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 6) },
-      { key: 'auth', label: 'Haulier authorisation letter', required: true, status: 'uploaded', fileName: 'auth-letter.pdf', uploadedBy: 'Allmighty Foods', at: minsAgo(60 * 5), note: 'Haulier: NEK Logistics · CR 199402400H' },
-      { key: 'slip', label: 'Payment transfer slip', required: true, status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'SGD 485.00 local charges — upload proof of transfer' },
-      { key: 'photos', label: 'Container photos (yard)', required: false, status: 'pending', note: 'Or ask your driver — photos posted to the timeline count too' }
+      { key: 'cinv', label: 'Commercial invoice', required: true, category: 'customs', status: 'approved', fileName: 'INV-AF-2481.pdf', uploadedBy: 'Allmighty Foods', at: minsAgo(60 * 23) },
+      { key: 'plist', label: 'Packing list', required: true, category: 'customs', status: 'approved', fileName: 'PL-AF-2481.pdf', uploadedBy: 'Allmighty Foods', at: minsAgo(60 * 23) },
+      { key: 'bl', label: 'Bill of lading (HBL)', required: true, category: 'customs', status: 'approved', fileName: 'SEARASI-HBL.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 24) },
+      { key: 'permit', label: 'Import permit (TradeNet)', required: true, category: 'customs', status: 'approved', fileName: 'permit-MP4471.pdf', uploadedBy: 'Joreen (M&P Customs)', at: minsAgo(60 * 6), note: 'Filed manually on TradeNet by M&P after doc check' },
+      { key: 'auth', label: 'Haulier authorisation letter', required: true, category: 'delivery', status: 'uploaded', fileName: 'auth-letter.pdf', uploadedBy: 'Allmighty Foods', at: minsAgo(60 * 5), note: 'Haulier: NEK Logistics · CR 199402400H' },
+      { key: 'slip', label: 'Payment transfer slip', required: true, category: 'payment', status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'SGD 485.00 local charges — upload proof of transfer' },
+      { key: 'photos', label: 'Container photos (yard)', required: false, category: 'delivery', status: 'pending', note: 'Or ask your driver — photos posted to the timeline count too' }
     ],
     quote: {
       ref: 'QT-2481',
@@ -339,7 +417,8 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s1, { type: 'created', actor: 'cs', note: 'Import job booked, tracking link shared with Allmighty Foods', at: minsAgo(60 * 26) })
   addEvent(s1, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 26) })
   addEvent(s1, { type: 'note', actor: 'cs', note: 'Vessel berthed, container discharged at Pasir Panjang T3', at: minsAgo(60 * 9) })
-  addEvent(s1, { type: 'note', actor: 'cs', note: 'SG Customs cleared — TradeNet permit approved', at: minsAgo(60 * 6) })
+  addEvent(s1, { type: 'customs', actor: 'cs', note: '🛃 Ready for declaration — invoice, packing list and B/L checked by M&P', at: minsAgo(60 * 7) })
+  addEvent(s1, { type: 'customs', actor: 'cs', note: '🛃 Declaration filed on TradeNet by Joreen (M&P Customs) (manual) · permit IN-2026-09-044713', at: minsAgo(60 * 6) })
   addEvent(s1, { type: 'status', status: 'picked_up', actor: 'driver', note: 'Container collected from PSA gate, seal intact', at: minsAgo(60 * 2) })
   addEvent(s1, { type: 'status', status: 'in_transit', actor: 'driver', note: 'On the way to Senoko via AYE → SLE', at: minsAgo(80) })
 
@@ -527,11 +606,16 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     weightKg: 296,
     description: '32 cartons — 295.52 kg / 1.299 m³ (LCL, vessel HONGKONG BRIDGE V.0055S)',
     events: [],
+    customs: {
+      required: true,
+      status: 'docs_pending',
+      note: '2 documents outstanding before M&P can declare on TradeNet'
+    },
     documents: [
-      { key: 'hbl', label: 'House bill of lading (draft)', required: true, status: 'uploaded', fileName: 'HBL-ICS-draft.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 68), note: 'Check & approve — becomes final on vessel departure' },
-      { key: 'cinv', label: 'Commercial invoice', required: true, status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'Needed for import permit declaration' },
-      { key: 'plist', label: 'Packing list', required: true, status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString() },
-      { key: 'gst', label: 'GST payment advice', required: true, status: 'pending', note: 'GST is cash/COD term — upload transfer proof before delivery' }
+      { key: 'hbl', label: 'House bill of lading', required: true, category: 'customs', status: 'approved', fileName: 'HBL-ICS-draft.pdf', uploadedBy: 'M&P', at: minsAgo(60 * 68), note: 'Checked by M&P — becomes final on vessel departure' },
+      { key: 'cinv', label: 'Commercial invoice', required: true, category: 'customs', status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'Needed before M&P can declare on TradeNet' },
+      { key: 'plist', label: 'Packing list', required: true, category: 'customs', status: 'pending', deadline: new Date(Date.now() + 24 * 3600_000).toISOString(), note: 'Needed before M&P can declare on TradeNet' },
+      { key: 'gst', label: 'GST payment advice', required: true, category: 'payment', status: 'pending', note: 'GST is cash/COD term — upload transfer proof before delivery' }
     ],
     quote: {
       ref: 'QT-3318',
@@ -612,6 +696,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s5, { type: 'note', actor: 'cs', note: 'Shipper contacted — booking form submitted', at: minsAgo(60 * 96) })
   addEvent(s5, { type: 'status', status: 'picked_up', actor: 'cs', note: 'Cargo collected at shipper warehouse, Kowloon', at: minsAgo(60 * 72) })
   addEvent(s5, { type: 'status', status: 'in_transit', actor: 'cs', note: 'Loaded on HONGKONG BRIDGE V.0055S — ETA Singapore in 2 days', at: minsAgo(60 * 70) })
+  addEvent(s5, { type: 'customs', actor: 'cs', note: '🛃 Import declaration pending — commercial invoice & packing list still needed. M&P files on TradeNet once documents are checked.', at: minsAgo(60 * 20) })
 
   // Review-program seeds — delivered jobs that feed the rewards dashboard
   const s6: Shipment = {
@@ -642,8 +727,10 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       at: minsAgo(60 * 16),
       screenshot: reviewShot('Melissa Tan', 5, 'On time, driver helped restack pallets. Great service!', 'Google'),
       platforms: ['google', 'facebook'],
-      reward: { code: 'MP10OFF', at: minsAgo(60 * 12), value: 'Grab $10' }
-    }
+      reward: { code: 'MP10OFF', at: minsAgo(60 * 12), value: 'Grab $10' },
+      helpedBy: 'Hafiz (driver)'
+    },
+    reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 18) }
   }
   addEvent(s6, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 30) })
   addEvent(s6, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 30) })
@@ -683,7 +770,8 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       at: minsAgo(60 * 20),
       screenshot: reviewShot('Esther Ng', 4, 'Smooth delivery, slight delay at the gate but driver kept us posted.', 'Google'),
       platforms: ['google']
-    }
+    },
+    reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 26) }
   }
   addEvent(s7, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 40) })
   addEvent(s7, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 40) })
@@ -712,7 +800,8 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
     description: 'Online order #AMF-10513 — gummies & jelly pack',
     events: [],
     createdAt: minsAgo(60 * 10),
-    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 5) }
+    signoff: { name: 'Priya Nair', signature: SEED_SIGNATURE, at: minsAgo(60 * 5) },
+    reviewAsk: { state: 'sent', trigger: 'delivered', at: minsAgo(60 * 4) }
   }
   addEvent(s8, { type: 'created', actor: 'cs', note: 'Delivery booked, tracking link sent', at: minsAgo(60 * 10) })
   addEvent(s8, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 10) })
@@ -721,6 +810,7 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s8, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Tampines area, 2 stops away', at: minsAgo(60 * 6) })
   addEvent(s8, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Priya Nair', at: minsAgo(60 * 5) })
   addEvent(s8, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(60 * 5) })
+  addEvent(s8, { type: 'note', actor: 'system', note: '⭐ Review request sent', at: minsAgo(60 * 4) })
 
   const s9: Shipment = {
     id: 'MP-8112-HF',
@@ -749,8 +839,10 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       at: minsAgo(60 * 44),
       screenshot: reviewShot('Fran Lim', 5, 'Van arrived before opening — stock was on the floor in 15 minutes.', 'Facebook'),
       platforms: ['facebook'],
-      reward: { code: 'GRAB10-HF', at: minsAgo(60 * 40), value: 'Grab $10' }
-    }
+      reward: { code: 'GRAB10-HF', at: minsAgo(60 * 40), value: 'Grab $10' },
+      helpedBy: 'Azlan (driver)'
+    },
+    reviewAsk: { state: 'answered', trigger: 'delivered', at: minsAgo(60 * 46) }
   }
   addEvent(s9, { type: 'created', actor: 'cs', note: 'Internal transfer booked, tracking link shared', at: minsAgo(60 * 56) })
   addEvent(s9, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 56) })
@@ -762,24 +854,73 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
   addEvent(s9, { type: 'note', actor: 'customer', note: 'Customer left a 5-star review: "Van arrived before opening — stock was on the floor in 15 minutes."', at: minsAgo(60 * 44) })
   addEvent(s9, { type: 'note', actor: 'cs', note: 'Review approved — reward code GRAB10-HF emailed to customer', at: minsAgo(60 * 40) })
 
+  // Delivered but NOT clean — open damage claim suppresses the review ask
+  const s10: Shipment = {
+    id: 'MP-8125-HF',
+    mode: 'b2self',
+    service: 'Last-mile delivery (own outlets)',
+    status: 'delivered',
+    customerName: 'Fran Lim',
+    customerEmail: 'fran@heyfran.com',
+    company: 'Hey Fran',
+    poNumber: 'TRF-0224',
+    origin: 'Hey Fran HQ & warehouse, Kaki Bukit Ave 1',
+    destination: 'Hey Fran pop-up, Jewel Changi Airport #B2-241',
+    eta: minsAgo(95),
+    driverName: 'Azlan Ismail',
+    driverPhone: '93456789',
+    vehicle: 'Van — GY 3307 A',
+    pieces: 8,
+    weightKg: 104,
+    description: 'Outlet restock — retail stock, packaging & display cards (Jewel pop-up)',
+    events: [],
+    createdAt: minsAgo(60 * 5),
+    signoff: { name: 'Aiman (Jewel outlet)', signature: SEED_SIGNATURE, at: minsAgo(90) },
+    claim: {
+      type: 'damage',
+      note: '2 of 8 cartons dented at corner — photos on timeline',
+      openedAt: minsAgo(80),
+      openedBy: 'customer',
+      status: 'open'
+    },
+    reviewAsk: {
+      state: 'held',
+      trigger: 'delivered',
+      at: minsAgo(80),
+      reason: 'Open damage claim — routed to CS/claims, no review ask sent'
+    }
+  }
+  addEvent(s10, { type: 'created', actor: 'cs', note: 'Internal transfer booked, tracking link shared', at: minsAgo(60 * 5) })
+  addEvent(s10, { type: 'status', status: 'booked', actor: 'system', at: minsAgo(60 * 5) })
+  addEvent(s10, { type: 'status', status: 'picked_up', actor: 'driver', note: '8 cartons loaded at Kaki Bukit', at: minsAgo(60 * 4) })
+  addEvent(s10, { type: 'status', status: 'in_transit', actor: 'driver', at: minsAgo(60 * 3) })
+  addEvent(s10, { type: 'status', status: 'out_for_delivery', actor: 'driver', note: 'Arriving Jewel loading bay', at: minsAgo(110) })
+  addEvent(s10, { type: 'signoff', actor: 'customer', note: 'Delivery signed off by Aiman (Jewel outlet)', at: minsAgo(90) })
+  addEvent(s10, { type: 'status', status: 'delivered', actor: 'system', at: minsAgo(90) })
+  addEvent(s10, { type: 'claim', actor: 'customer', note: '⚠️ Damage claim opened by customer: 2 of 8 cartons dented at corner — photos on timeline', at: minsAgo(80) })
+  addEvent(s10, { type: 'note', actor: 'system', note: '⏸ Review request held — open damage claim → CS/claims', internal: true, at: minsAgo(80) })
+  addEvent(s10, { type: 'note', actor: 'cs', note: 'Claim acknowledged — Sarah (CS) collecting photos and carton counts for the report', at: minsAgo(70) })
+
   // Same job, different inboxes — colleague / Gmail / personal
   s1.contacts = [
     { email: s1.customerEmail, name: s1.customerName, source: 'booking' },
     { email: 'esther@allmightyfoods.com.sg', name: 'Esther Ng', source: 'inbound', at: minsAgo(50) }
   ]
-  addEvent(s1, { type: 'note', actor: 'cs', note: '📩 esther@allmightyfoods.com.sg wrote in from the company domain (new address esther@allmightyfoods.com.sg)', at: minsAgo(50) })
-  addEvent(s1, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "Container TEMU 482391-0 — customs?"', at: minsAgo(49) })
+  addEvent(s1, { type: 'note', actor: 'cs', note: '📩 esther@allmightyfoods.com.sg wrote in from the company domain (new address esther@allmightyfoods.com.sg)', internal: true, at: minsAgo(50) })
+  addEvent(s1, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "Container TEMU 482391-0 — customs?"', internal: true, at: minsAgo(49) })
+  addEvent(s1, { type: 'message', actor: 'customer', note: '💬 Customer asked via tracking page: "Can the truck do the 2pm slot at Senoko tomorrow?"', at: minsAgo(35) })
+  addEvent(s1, { type: 'note', actor: 'cs', note: '✅ M&P replied — 2pm Senoko slot confirmed with the haulier', at: minsAgo(30) })
 
   s5.contacts = [
     { email: s5.customerEmail, name: s5.customerName, source: 'booking' },
     { email: 'brendan.ds@gmail.com', name: 'Brendan De Souza', source: 'inbound', at: minsAgo(60 * 18) }
   ]
-  addEvent(s5, { type: 'note', actor: 'cs', note: '📩 brendan.ds@gmail.com wrote in quoting this job (new address brendan.ds@gmail.com)', at: minsAgo(60 * 18) })
-  addEvent(s5, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "MP-3318-MC — any update on unstuffing?"', at: minsAgo(60 * 17) })
+  addEvent(s5, { type: 'note', actor: 'cs', note: '📩 brendan.ds@gmail.com wrote in quoting this job (new address brendan.ds@gmail.com)', internal: true, at: minsAgo(60 * 18) })
+  addEvent(s5, { type: 'note', actor: 'cs', note: '🤖 AI auto-replied to "MP-3318-MC — any update on unstuffing?"', internal: true, at: minsAgo(60 * 17) })
 
-  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9]
+  const shipments = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
   const emails: OutboxEmail[] = [
-    ...[s1, s2, s3, s5, s6, s7, s8, s9].map((s) => buildTrackingEmail(s, s.createdAt)),
+    ...[s1, s2, s3, s5, s6, s7, s8, s9, s10].map((s) => buildTrackingEmail(s, s.createdAt)),
     buildReviewEmail(s6, minsAgo(60 * 18)),
     buildRewardEmail(s6, 'MP10OFF', minsAgo(60 * 12)),
     buildReviewEmail(s7, minsAgo(60 * 26)),
@@ -821,7 +962,33 @@ export function buildSeedData(): { shipments: Shipment[]; emails: OutboxEmail[] 
       subject: 'MP-3318-MC — any update on unstuffing?',
       body: 'Hi Brendan,\n\nMP-3318-MC is still in transit on HONGKONG BRIDGE V.0055S — ETA Singapore in 2 days. We will update delivery once the container is unstuffed.\n\n— M&P Customer Service (AI assistant)',
       at: minsAgo(60 * 17)
-    })
+    }),
+    // Ask box on /track → straight into the job-tied inbox
+    {
+      id: 'in-4471-melissa-ask',
+      shipmentId: s1.id,
+      from: 'melissa@allmightyfoods.com.sg',
+      to: 'cs@mp.com.sg',
+      direction: 'in',
+      kind: 'message',
+      matchedBy: 'shipment-id',
+      subject: `${s1.id} — question from tracking page`,
+      body: 'Can the truck do the 2pm slot at Senoko tomorrow?',
+      ctaLabel: 'Open shipment',
+      ctaUrl: `/track/${s1.id}`,
+      at: minsAgo(35),
+      delivery: { state: 'simulated', to: 'cs@mp.com.sg', detail: 'tracking page ask box' }
+    },
+    buildCsReplyEmail({
+      id: 'out-4471-melissa-ask',
+      shipment: s1,
+      to: 'melissa@allmightyfoods.com.sg',
+      subject: `${s1.id} — question from tracking page`,
+      body: 'Hi Melissa,\n\n2pm at Senoko tomorrow works — haulier confirmed the slot. Driver Hafiz will call 30 minutes before arrival.\n\n— M&P Customer Service',
+      at: minsAgo(30)
+    }),
+    // Inbox noise — unmatched mail the ops feed folds away
+    ...noiseMails()
   ]
   return { shipments, emails }
 }

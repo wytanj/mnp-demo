@@ -355,6 +355,7 @@ function platformLabel(p: 'google' | 'facebook') {
                 <span class="muted">{{ s.customerName }}</span>
               </div>
               <div v-if="s.review!.comment" class="route">"{{ s.review!.comment }}"</div>
+              <div v-if="s.review!.helpedBy" class="route"><strong>Named staff:</strong> {{ s.review!.helpedBy }}</div>
               <img
                 v-if="s.review!.screenshot"
                 class="proof-thumb"
@@ -431,6 +432,7 @@ function platformLabel(p: 'google' | 'facebook') {
                   </div>
                   <div class="route">{{ clientName(s) }} · {{ s.customerName }}</div>
                   <div v-if="s.review!.comment" class="route">"{{ s.review!.comment }}"</div>
+                  <div v-if="s.review!.helpedBy" class="route"><strong>Named staff:</strong> {{ s.review!.helpedBy }}</div>
                   <img
                     v-if="s.review!.screenshot"
                     class="proof-thumb"
@@ -555,7 +557,10 @@ function platformLabel(p: 'google' | 'facebook') {
                       <span v-for="st in stars(s.review!.rating)" :key="st.i" :class="{ on: st.on }">★</span>
                     </span>
                   </td>
-                  <td style="max-width: 280px">{{ s.review!.comment || '—' }}</td>
+                  <td style="max-width: 280px">
+                    {{ s.review!.comment || '—' }}
+                    <div v-if="s.review!.helpedBy" class="meta">Named staff: {{ s.review!.helpedBy }}</div>
+                  </td>
                   <td>
                     <span v-for="p in s.review!.platforms ?? []" :key="p" class="pill pill-gray" style="margin: 0 4px 4px 0">{{ platformLabel(p) }}</span>
                     <span v-if="!(s.review!.platforms ?? []).length" class="muted">In-app</span>
@@ -596,6 +601,7 @@ function platformLabel(p: 'google' | 'facebook') {
                 <span class="muted">{{ clientName(s) }} · {{ s.customerName }}</span>
               </div>
               <div v-if="s.review!.comment" class="route">"{{ s.review!.comment }}"</div>
+              <div v-if="s.review!.helpedBy" class="route"><strong>Named staff:</strong> {{ s.review!.helpedBy }}</div>
             </div>
             <div class="actions" style="align-items: center">
               <input v-model="rewardCodes[s.id]" type="text" placeholder="GRAB10" style="width: 140px" />
@@ -691,6 +697,7 @@ function platformLabel(p: 'google' | 'facebook') {
                   <td>
                     <span v-if="emailFor(s.id, 'review')" class="pill pill-green">Auto sent</span>
                     <span v-else-if="s.review" class="pill pill-gray">Done</span>
+                    <span v-else-if="s.reviewAsk?.state === 'held'" class="pill pill-amber" :title="s.reviewAsk?.reason">Held — claim</span>
                     <span v-else-if="s.status === 'delivered'" class="pill pill-amber">Due</span>
                     <span v-else class="pill pill-gray">—</span>
                   </td>

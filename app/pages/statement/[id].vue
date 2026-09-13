@@ -47,6 +47,7 @@ function print() {
   <div>
     <TopBar role="Statement of account" />
     <main class="page">
+      <NuxtLink to="/portal" style="display:inline-block;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; My shipments</NuxtLink>
       <div v-if="!soa" class="card">
         <h2>Statement not found</h2>
       </div>

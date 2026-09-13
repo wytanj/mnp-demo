@@ -2,41 +2,195 @@
 import {
   CLAIM_LABELS,
   CUSTOMS_LABELS,
+  declarationGaps,
   docsDone,
-  isNoiseMail,
-  mailDirectionOf,
-  mailFromOf,
-  mailKindOf,
-  mailToOf,
+  etaPassed,
+  MODE_LABELS,
   STATUS_LABELS,
-  type OutboxEmail,
-  type Shipment
+  type CommsThread,
+  type Shipment,
+  type ShipmentStatus
 } from '#shared/utils/shipping'
 
 definePageMeta({ layout: 'ops' })
 
-const { data: shipments, refresh: refreshShipments } = await useFetch<Shipment[]>('/api/shipments')
-const { data: emails, refresh: refreshEmails } = await useFetch<OutboxEmail[]>('/api/emails')
+const toast = useToast()
 
-const route = useRoute()
-const showForm = ref(false)
-const creating = ref(false)
-const toast = ref('')
-const openEmail = ref<string | null>(null)
-const openMore = ref<string | null>(null)
-const showNoise = ref(false)
-const showAllMail = ref(false)
+const { data: shipments, refresh: refreshShipments } = await useFetch<Shipment[]>('/api/shipments', {
+  default: () => [] as Shipment[]
+})
+const { data: threads, refresh: refreshThreads } = await useFetch<CommsThread[]>('/api/comms', {
+  default: () => [] as CommsThread[]
+})
 
-// ?job=MP-4471-AF opens that job's panel on load; ?mail= is the old spelling.
-const openJob = ref<string | null>(
-  ((route.query.job as string) || (route.query.mail as string) || '').toUpperCase() || null
+async function refreshAll() {
+  await Promise.all([refreshShipments(), refreshThreads()])
+}
+
+let timer: ReturnType<typeof setInterval>
+onMounted(() => {
+  timer = setInterval(refreshAll, 5000)
+})
+onUnmounted(() => clearInterval(timer))
+
+/* ── attention model ─────────────────────────────────────── */
+
+type AttnKey = 'claims' | 'customs_gaps' | 'ready_decl' | 'signoff' | 'needs_reply'
+
+const needsReplyIds = computed(() => {
+  const set = new Set<string>()
+  for (const t of threads.value ?? []) {
+    if (t.status === 'needs_reply' && t.shipmentId) set.add(t.shipmentId)
+  }
+  return set
+})
+
+function hasOpenClaim(s: Shipment) {
+  return s.claim?.status === 'open'
+}
+function customsGaps(s: Shipment): string[] {
+  if (!s.customs) return []
+  if (s.customs.status === 'declared' || s.customs.status === 'cleared') return []
+  return declarationGaps(s)
+}
+function readyForDeclaration(s: Shipment) {
+  return s.customs?.status === 'ready_for_declaration'
+}
+function awaitingSignoff(s: Shipment) {
+  return !s.signoff && (s.status === 'out_for_delivery' || s.status === 'delivered')
+}
+function needsReply(s: Shipment) {
+  return needsReplyIds.value.has(s.id)
+}
+function partnerWait(s: Shipment) {
+  return (s.partners ?? []).some((p) => p.state === 'waiting' || p.state === 'blocked')
+}
+
+const MATCH: Record<AttnKey, (s: Shipment) => boolean> = {
+  claims: hasOpenClaim,
+  customs_gaps: (s) => customsGaps(s).length > 0,
+  ready_decl: readyForDeclaration,
+  signoff: awaitingSignoff,
+  needs_reply: needsReply
+}
+
+const TILES: Array<{ key: AttnKey; label: string; hint: string; icon: string; color: string }> = [
+  { key: 'claims', label: 'Open claims', hint: 'review ask held', icon: 'i-lucide-shield-alert', color: 'text-red-600' },
+  { key: 'customs_gaps', label: 'Customs gaps', hint: 'cannot file yet', icon: 'i-lucide-stamp', color: 'text-amber-600' },
+  { key: 'ready_decl', label: 'Ready for declaration', hint: 'officer files on TradeNet', icon: 'i-lucide-file-check', color: 'text-blue-600' },
+  { key: 'signoff', label: 'Awaiting sign-off', hint: 'no POD yet', icon: 'i-lucide-signature', color: 'text-zinc-600' },
+  { key: 'needs_reply', label: 'Needs reply', hint: 'email or WhatsApp', icon: 'i-lucide-message-square-dot', color: 'text-primary' }
+]
+
+const filter = ref<AttnKey | null>(null)
+const search = ref('')
+
+const tiles = computed(() =>
+  TILES.map((t) => ({ ...t, n: (shipments.value ?? []).filter(MATCH[t.key]).length }))
 )
 
-type AttnKey = 'customs_docs' | 'ready_decl' | 'signoff' | 'claims' | 'proof'
-const filter = ref<AttnKey | null>(null)
+function toggleFilter(key: AttnKey) {
+  filter.value = filter.value === key ? null : key
+}
+
+function clientLine(s: Shipment) {
+  return s.mode === 'b2c' ? s.customerName : (s.company ?? s.customerName)
+}
+
+/** Attention first: claims, then customs, then sign-off, then live jobs, then done. */
+function attentionRank(s: Shipment): number {
+  if (hasOpenClaim(s)) return 0
+  if (customsGaps(s).length || readyForDeclaration(s)) return 1
+  if (needsReply(s)) return 2
+  if (awaitingSignoff(s)) return 3
+  if (s.status !== 'delivered' && s.customs) return 4
+  if (s.status !== 'delivered') return 5
+  return 6
+}
+
+const rows = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  let list = [...(shipments.value ?? [])]
+  if (filter.value) list = list.filter(MATCH[filter.value])
+  if (q) {
+    list = list.filter((s) =>
+      `${s.id} ${clientLine(s)} ${s.customerName} ${s.origin} ${s.destination} ${s.description}`
+        .toLowerCase()
+        .includes(q)
+    )
+  }
+  return list.sort(
+    (a, b) => attentionRank(a) - attentionRank(b) || b.createdAt.localeCompare(a.createdAt)
+  )
+})
+
+const columns = [
+  { accessorKey: 'id', header: 'Job' },
+  { accessorKey: 'client', header: 'Client' },
+  { accessorKey: 'route', header: 'Route' },
+  { accessorKey: 'status', header: 'Status' },
+  { accessorKey: 'docs', header: 'Docs' },
+  { accessorKey: 'customs', header: 'Customs' },
+  { accessorKey: 'flags', header: 'Flags' },
+  { accessorKey: 'eta', header: 'ETA' },
+  { accessorKey: 'actions', header: '' }
+]
+
+const STATUS_COLOR: Record<ShipmentStatus, 'success' | 'warning' | 'info' | 'neutral'> = {
+  booked: 'neutral',
+  picked_up: 'info',
+  in_transit: 'info',
+  out_for_delivery: 'warning',
+  delivered: 'success'
+}
+
+function customsBadge(s: Shipment): { label: string; color: 'success' | 'warning' | 'info' } | null {
+  const c = s.customs
+  if (!c) return null
+  if (c.status === 'docs_pending') return { label: CUSTOMS_LABELS.docs_pending, color: 'warning' }
+  if (c.status === 'ready_for_declaration') return { label: CUSTOMS_LABELS.ready_for_declaration, color: 'info' }
+  if (c.status === 'declared') return { label: 'Declared', color: 'success' }
+  return { label: 'Cleared', color: 'success' }
+}
+
+/** Coarse relative time — hours/days only, so SSR and hydration agree. */
+function rel(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now()
+  const abs = Math.abs(ms)
+  const h = Math.round(abs / 3600_000)
+  const d = Math.round(abs / 86400_000)
+  const label = abs < 3600_000 ? '<1h' : h < 36 ? `${h}h` : `${d}d`
+  return ms >= 0 ? `in ${label}` : `${label} ago`
+}
+
+function fullWhen(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+  })
+}
+
+async function copyLink(id: string) {
+  const url = `${location.origin}/track/${id}`
+  try {
+    await navigator.clipboard.writeText(url)
+  } catch {
+    // clipboard is blocked in some embedded browsers — still tell the room the link
+  }
+  toast.add({
+    title: 'Tracking link copied',
+    description: url,
+    color: 'primary',
+    icon: 'i-lucide-link'
+  })
+}
+
+/* ── new booking ─────────────────────────────────────────── */
+
+const showForm = ref(false)
+const creating = ref(false)
 
 const form = reactive({
-  mode: 'b2c',
+  mode: 'b2c' as 'b2b' | 'b2c' | 'b2self',
   customerName: '',
   customerEmail: '',
   company: '',
@@ -53,39 +207,27 @@ const form = reactive({
   description: ''
 })
 
-let timer: ReturnType<typeof setInterval>
-onMounted(() => {
-  timer = setInterval(() => {
-    refreshShipments()
-    refreshEmails()
-  }, 5000)
-  if (openJob.value) {
-    nextTick(() => {
-      document.getElementById(`job-${openJob.value}`)?.scrollIntoView({ block: 'center' })
-    })
-  }
-})
-onUnmounted(() => clearInterval(timer))
+const MODE_ITEMS = [
+  { label: 'B2C — consumer', value: 'b2c' },
+  { label: 'B2B — business', value: 'b2b' },
+  { label: 'B2SELF — own outlets', value: 'b2self' }
+]
+const INCOTERMS = ['EXW', 'FOB', 'CIF', 'DAP', 'DDP']
 
-function flash(msg: string) {
-  toast.value = msg
-  setTimeout(() => (toast.value = ''), 2400)
-}
-
-async function copyLink(id: string) {
-  const url = `${location.origin}/track/${id}`
-  await navigator.clipboard.writeText(url)
-  flash('Tracking link copied — paste it into WhatsApp or email')
-}
-
-async function refreshAll() {
-  await Promise.all([refreshShipments(), refreshEmails()])
+function validate(state: typeof form) {
+  const errors: Array<{ name: string; message: string }> = []
+  if (!state.customerName.trim()) errors.push({ name: 'customerName', message: 'Required' })
+  if (!state.customerEmail.trim()) errors.push({ name: 'customerEmail', message: 'Required' })
+  if (!state.origin.trim()) errors.push({ name: 'origin', message: 'Required' })
+  if (!state.destination.trim()) errors.push({ name: 'destination', message: 'Required' })
+  if (!state.description.trim()) errors.push({ name: 'description', message: 'Required' })
+  return errors
 }
 
 async function createShipment() {
   creating.value = true
   try {
-    await $fetch('/api/shipments', { method: 'POST', body: { ...form } })
+    const created = await $fetch<Shipment>('/api/shipments', { method: 'POST', body: { ...form } })
     showForm.value = false
     Object.assign(form, {
       customerName: '', customerEmail: '', company: '', poNumber: '',
@@ -93,151 +235,22 @@ async function createShipment() {
       pieces: 1, weightKg: 10, description: ''
     })
     await refreshAll()
-    flash('Shipment created — tracking email sent to customer')
+    toast.add({
+      title: `Booking ${created?.id ?? ''} created`,
+      description: 'Tracking email sent to the customer.',
+      color: 'success',
+      icon: 'i-lucide-check'
+    })
   } catch (e: unknown) {
-    const anyErr = e as { data?: { statusMessage?: string } }
-    flash(anyErr?.data?.statusMessage ?? 'Could not create shipment')
+    const err = e as { data?: { statusMessage?: string } }
+    toast.add({
+      title: 'Could not create the booking',
+      description: err?.data?.statusMessage ?? 'Check the required fields and try again.',
+      color: 'error',
+      icon: 'i-lucide-triangle-alert'
+    })
   } finally {
     creating.value = false
-  }
-}
-
-/* ── job classification ─────────────────────────────────── */
-
-function hasOpenClaim(s: Shipment) {
-  return s.claim?.status === 'open'
-}
-function customsDocsOutstanding(s: Shipment) {
-  return s.customs?.status === 'docs_pending'
-}
-function readyForDeclaration(s: Shipment) {
-  return s.customs?.status === 'ready_for_declaration'
-}
-function awaitingSignoff(s: Shipment) {
-  return !s.signoff && (s.status === 'out_for_delivery' || s.status === 'delivered')
-}
-function proofToVerify(s: Shipment) {
-  return !!s.review?.screenshot && !s.review?.reward
-}
-
-const MATCH: Record<AttnKey, (s: Shipment) => boolean> = {
-  customs_docs: customsDocsOutstanding,
-  ready_decl: readyForDeclaration,
-  signoff: awaitingSignoff,
-  claims: hasOpenClaim,
-  proof: proofToVerify
-}
-
-const TILES: Array<{ key: AttnKey; label: string; hint: string }> = [
-  { key: 'claims', label: 'Open claims', hint: 'review ask held' },
-  { key: 'customs_docs', label: 'Customs docs outstanding', hint: 'cannot declare yet' },
-  { key: 'ready_decl', label: 'Ready for declaration', hint: 'officer files on TradeNet' },
-  { key: 'signoff', label: 'Awaiting sign-off', hint: 'no POD yet' },
-  { key: 'proof', label: 'Proof to verify', hint: 'voucher waiting' }
-]
-
-const tiles = computed(() =>
-  TILES.map((t) => ({ ...t, n: (shipments.value ?? []).filter(MATCH[t.key]).length }))
-)
-
-/** Attention first: claims, then customs, then sign-off, then live jobs, then done. */
-function attentionRank(s: Shipment): number {
-  if (hasOpenClaim(s)) return 0
-  if (customsDocsOutstanding(s) || readyForDeclaration(s)) return 1
-  if (awaitingSignoff(s)) return 2
-  if (s.status !== 'delivered' && s.customs) return 3
-  if (s.status !== 'delivered') return 4
-  return 5
-}
-
-const jobs = computed(() => {
-  const list = [...(shipments.value ?? [])]
-  const filtered = filter.value ? list.filter(MATCH[filter.value]) : list
-  return filtered.sort(
-    (a, b) => attentionRank(a) - attentionRank(b) || b.createdAt.localeCompare(a.createdAt)
-  )
-})
-
-function toggleFilter(key: AttnKey) {
-  filter.value = filter.value === key ? null : key
-  if (import.meta.client) {
-    document.getElementById('ops-jobs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-}
-
-function statusPill(s: Shipment) {
-  if (s.status === 'delivered') return 'pill-green'
-  if (s.status === 'out_for_delivery') return 'pill-amber'
-  return 'pill-blue'
-}
-
-function customsPill(s: Shipment): { label: string; cls: string } | null {
-  const c = s.customs
-  if (!c) return null
-  if (c.status === 'docs_pending') return { label: 'Customs: docs pending', cls: 'pill-amber' }
-  if (c.status === 'ready_for_declaration') return { label: 'Ready for declaration', cls: 'pill-blue' }
-  if (c.status === 'declared') {
-    const who = (c.declaredBy ?? '').split(' ')[0]
-    return { label: `Declared on TradeNet${who ? ` · ${who}` : ''}`, cls: 'pill-green' }
-  }
-  return { label: CUSTOMS_LABELS.cleared, cls: 'pill-green' }
-}
-
-function reviewPill(s: Shipment): { label: string; cls: string } | null {
-  if (s.review) return { label: `★ ${s.review.rating}/5`, cls: 'pill-amber' }
-  const st = s.reviewAsk?.state
-  if (st === 'sent') return { label: 'Review sent', cls: 'pill-gray' }
-  if (st === 'held') return { label: 'Review held', cls: 'pill-amber' }
-  return null
-}
-
-function clientLine(s: Shipment) {
-  return s.mode === 'b2c' ? s.customerName : (s.company ?? s.customerName)
-}
-
-function toggleJob(id: string) {
-  openJob.value = openJob.value === id ? null : id
-  openMore.value = null
-}
-
-/* ── mail ───────────────────────────────────────────────── */
-
-function mailFor(id: string): OutboxEmail[] {
-  return (emails.value ?? []).filter((e) => e.shipmentId === id)
-}
-
-const byNewest = (a: OutboxEmail, b: OutboxEmail) => b.at.localeCompare(a.at)
-
-const jobMail = computed(() =>
-  (emails.value ?? []).filter((e) => e.shipmentId?.trim() && !isNoiseMail(e)).sort(byNewest)
-)
-const noiseMail = computed(() => (emails.value ?? []).filter(isNoiseMail).sort(byNewest))
-const visibleMail = computed(() => (showAllMail.value ? jobMail.value : jobMail.value.slice(0, 8)))
-
-const KIND_LABELS: Record<string, string> = {
-  tracking: 'Tracking',
-  review: 'Review request',
-  reward: 'Voucher',
-  inbound: 'Inbound',
-  reply: 'Reply',
-  message: 'Asked via tracking',
-  status: 'Status',
-  cs: 'CS'
-}
-function kindLabel(e: OutboxEmail) {
-  return KIND_LABELS[mailKindOf(e)] ?? 'CS'
-}
-
-function when(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-  })
-}
-
-function openJobFromMail(id: string) {
-  openJob.value = id
-  if (import.meta.client) {
-    nextTick(() => document.getElementById(`job-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
   }
 }
 </script>
@@ -245,338 +258,288 @@ function openJobFromMail(id: string) {
 <template>
   <UDashboardPanel>
     <template #header>
-      <UDashboardNavbar title="Jobs" icon="i-lucide-boxes" />
+      <UDashboardNavbar title="Jobs" icon="i-lucide-boxes">
+        <template #right>
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            placeholder="Search job, client or route"
+            class="w-56 hidden sm:block"
+            :ui="{ base: 'ps-9! border-0!', trailing: 'pe-1' }"
+          >
+            <template v-if="search" #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                icon="i-lucide-circle-x"
+                aria-label="Clear search"
+                @click="search = ''"
+              />
+            </template>
+          </UInput>
+          <UButton icon="i-lucide-plus" color="primary" @click="showForm = true">
+            New booking
+          </UButton>
+        </template>
+      </UDashboardNavbar>
     </template>
 
     <template #body>
-      <!-- legacy ops home, now rendered inside the ops sidebar shell -->
-      <main class="page wide" style="max-width: none; padding: 0">
-      <div class="card ops-head">
-        <div class="row spread">
-          <div>
-            <h2>Operations</h2>
-            <p class="sub" style="margin-bottom: 0">
-              Every job, its documents, its claims and its mail in one place.
-            </p>
-          </div>
-          <button class="btn btn-primary" @click="showForm = !showForm">
-            {{ showForm ? 'Close' : '+ New shipment' }}
-          </button>
-        </div>
-
-        <div class="ops-attn">
+      <div class="space-y-4">
+        <!-- attention strip -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <button
             v-for="t in tiles"
             :key="t.key"
-            class="kpi clickable"
-            :class="{ on: filter === t.key, zero: t.n === 0 }"
             type="button"
+            class="text-left rounded-xl border bg-white px-4 py-3 transition-all hover:shadow-sm"
+            :class="filter === t.key
+              ? 'border-primary ring-2 ring-primary/30'
+              : t.n ? 'border-zinc-200' : 'border-zinc-200 opacity-60 hover:opacity-100'"
             @click="toggleFilter(t.key)"
           >
-            <div class="n">{{ t.n }}</div>
-            <div class="l">{{ t.label }}</div>
-            <div class="hint">{{ t.hint }}</div>
+            <div class="flex items-center gap-2">
+              <UIcon :name="t.icon" class="size-4 shrink-0" :class="t.color" />
+              <span class="text-2xl font-bold leading-none tabular-nums">{{ t.n }}</span>
+            </div>
+            <div class="mt-1.5 text-[13px] font-semibold leading-tight text-zinc-800">{{ t.label }}</div>
+            <div class="text-[11px] text-zinc-500 leading-tight">{{ t.hint }}</div>
           </button>
         </div>
 
-        <form v-if="showForm" style="margin-top: 18px" @submit.prevent="createShipment">
-          <div class="row" style="margin-bottom: 14px">
-            <label class="row" style="gap: 6px; font-size: 14px; font-weight: 600; cursor: pointer">
-              <input v-model="form.mode" type="radio" value="b2c" /> B2C (consumer)
-            </label>
-            <label class="row" style="gap: 6px; font-size: 14px; font-weight: 600; cursor: pointer">
-              <input v-model="form.mode" type="radio" value="b2b" /> B2B (business)
-            </label>
-            <label class="row" style="gap: 6px; font-size: 14px; font-weight: 600; cursor: pointer">
-              <input v-model="form.mode" type="radio" value="b2self" /> B2SELF (own outlets / internal transfer)
-            </label>
-          </div>
+        <UInput
+          v-model="search"
+          icon="i-lucide-search"
+          placeholder="Search job, client or route"
+          class="sm:hidden w-full"
+          :ui="{ base: 'ps-9! border-0!' }"
+        />
 
-          <div class="form-grid">
-            <label class="field"><span>Customer name *</span>
-              <input v-model="form.customerName" type="text" required placeholder="Daniel Wong" />
-            </label>
-            <label class="field"><span>Customer email *</span>
-              <input v-model="form.customerEmail" type="email" required placeholder="daniel@example.com" />
-            </label>
-            <template v-if="form.mode === 'b2b'">
-              <label class="field"><span>Company</span>
-                <input v-model="form.company" type="text" placeholder="Allmighty Foods Pte Ltd" />
-              </label>
-              <label class="field"><span>PO number</span>
-                <input v-model="form.poNumber" type="text" placeholder="PO-4471" />
-              </label>
-              <label class="field"><span>Incoterms</span>
-                <select v-model="form.incoterms">
-                  <option>EXW</option><option>FOB</option><option>CIF</option>
-                  <option>DAP</option><option>DDP</option>
-                </select>
-              </label>
-            </template>
-            <template v-else-if="form.mode === 'b2self'">
-              <label class="field"><span>Brand / company</span>
-                <input v-model="form.company" type="text" placeholder="Hey Fran" />
-              </label>
-              <label class="field"><span>Transfer reference</span>
-                <input v-model="form.poNumber" type="text" placeholder="TRF-0219" />
-              </label>
-            </template>
-            <label class="field"><span>Origin *</span>
-              <input v-model="form.origin" type="text" required placeholder="Senoko Food Hub, Singapore" />
-            </label>
-            <label class="field"><span>Destination *</span>
-              <input v-model="form.destination" type="text" required placeholder="Tuas, Singapore" />
-            </label>
-            <label class="field"><span>ETA</span>
-              <input v-model="form.eta" type="datetime-local" />
-            </label>
-            <label class="field"><span>Driver</span>
-              <input v-model="form.driverName" type="text" placeholder="Hafiz Rahman" />
-            </label>
-            <label class="field"><span>Driver mobile (their portal login)</span>
-              <input v-model="form.driverPhone" type="tel" placeholder="9123 4567" />
-            </label>
-            <label class="field"><span>Vehicle</span>
-              <input v-model="form.vehicle" type="text" placeholder="14-ft lorry — GBC 4521 K" />
-            </label>
-            <label class="field"><span>Pieces</span>
-              <input v-model.number="form.pieces" type="number" min="1" />
-            </label>
-            <label class="field"><span>Weight (kg)</span>
-              <input v-model.number="form.weightKg" type="number" min="0" />
-            </label>
-            <label class="field full"><span>Cargo description *</span>
-              <input v-model="form.description" type="text" required placeholder="Household goods — fragile" />
-            </label>
-          </div>
-          <button class="btn btn-primary" type="submit" :disabled="creating">
-            {{ creating ? 'Creating…' : 'Create & send tracking link' }}
-          </button>
-        </form>
-      </div>
-
-      <div class="layout cols-2">
-        <div>
-          <div id="ops-jobs" class="card">
-            <div class="row spread">
-              <h2>
+        <!-- jobs table -->
+        <UCard :ui="{ body: 'p-0 sm:p-0' }">
+          <template #header>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-sm font-bold">
                 Jobs
-                <span class="pill pill-gray">{{ jobs.length }}</span>
+                <UBadge color="neutral" variant="subtle" class="ms-1">{{ rows.length }}</UBadge>
               </h2>
-              <div class="row" style="gap: 8px">
-                <button v-if="filter" class="btn btn-ghost" @click="filter = null">Clear filter</button>
-                <NuxtLink class="btn btn-outline" to="/driver">🚚 Driver portal</NuxtLink>
-              </div>
+              <p class="text-xs text-zinc-500 flex-1 min-w-[14rem]">
+                Sorted by what needs a person: claims, customs, unanswered messages, sign-off.
+              </p>
+              <UButton
+                v-if="filter || search"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-filter-x"
+                @click="filter = null; search = ''"
+              >
+                Clear filter
+              </UButton>
             </div>
-            <p class="sub">Sorted by what needs a person: claims, customs, sign-off, then everything running.</p>
+          </template>
 
-            <p v-if="!jobs.length" class="dash-empty">No jobs match this filter.</p>
+          <UTable
+            :data="rows"
+            :columns="columns"
+            :empty="'No jobs match this filter.'"
+            :on-select="(_e: Event, row: any) => navigateTo(`/ops/jobs/${row.original.id}`)"
+            :ui="{ td: 'align-top py-2.5', th: 'py-2' }"
+          >
+            <template #id-cell="{ row }">
+              <div class="font-bold text-sm whitespace-nowrap">{{ row.original.id }}</div>
+              <UBadge color="neutral" variant="subtle" size="sm" class="mt-1">
+                {{ MODE_LABELS[row.original.mode as 'b2b'] }}
+              </UBadge>
+            </template>
 
-            <div v-for="s in jobs" :id="`job-${s.id}`" :key="s.id" class="shipment-block ops-job" :class="{ open: openJob === s.id }">
-              <div class="shipment-row">
-                <div class="ops-job-main">
-                  <div class="row ops-pills">
-                    <span class="id">{{ s.id }}</span>
-                    <span class="pill" :class="statusPill(s)">{{ STATUS_LABELS[s.status] }}</span>
-                    <span class="pill pill-gray">{{ s.mode.toUpperCase() }}</span>
-                    <span
-                      v-if="s.documents?.length"
-                      class="pill"
-                      :class="docsDone(s).done === docsDone(s).total ? 'pill-green' : 'pill-amber'"
-                    >Docs {{ docsDone(s).done }}/{{ docsDone(s).total }}</span>
-                    <span v-if="customsPill(s)" class="pill" :class="customsPill(s)!.cls">{{ customsPill(s)!.label }}</span>
-                    <span v-if="s.claim?.status === 'open'" class="pill ops-pill-red">
-                      {{ CLAIM_LABELS[s.claim.type] }}
-                    </span>
-                    <span v-if="reviewPill(s)" class="pill" :class="reviewPill(s)!.cls">{{ reviewPill(s)!.label }}</span>
-                    <span
-                      v-if="mailFor(s.id).length"
-                      class="pill"
-                      :class="openJob === s.id ? 'pill-blue' : 'pill-gray'"
-                    >Mail {{ mailFor(s.id).length }}</span>
-                  </div>
-                  <div class="route">
-                    {{ s.origin }} → {{ s.destination }} · {{ clientLine(s) }}
-                    <template v-if="s.service"> · {{ s.service }}</template>
-                  </div>
-                </div>
-                <div class="actions">
-                  <button class="btn" :class="openJob === s.id ? 'btn-primary' : 'btn-outline'" @click="toggleJob(s.id)">
-                    {{ openJob === s.id ? 'Close' : 'Open' }}
-                  </button>
-                  <button class="btn btn-outline" @click="copyLink(s.id)">Copy tracking link</button>
-                  <button
-                    class="btn btn-ghost ops-more-btn"
-                    :aria-expanded="openMore === s.id"
-                    :title="`More links for ${s.id}`"
-                    @click="openMore = openMore === s.id ? null : s.id"
-                  >More ▾</button>
+            <template #client-cell="{ row }">
+              <div class="w-40 max-w-40">
+                <div class="text-sm font-medium truncate">{{ clientLine(row.original) }}</div>
+                <div class="text-[11px] text-zinc-500 truncate">
+                  {{ row.original.service ?? MODE_LABELS[row.original.mode as 'b2b'] }}
                 </div>
               </div>
+            </template>
 
-              <div v-if="openMore === s.id" class="row ops-more">
-                <NuxtLink class="btn btn-outline" :to="`/track/${s.id}`">Customer view</NuxtLink>
-                <NuxtLink class="btn btn-outline" :to="`/driver/${s.id}`">Driver view</NuxtLink>
-                <NuxtLink v-if="s.quote" class="btn btn-outline" :to="`/quote/${s.id}`">Quote</NuxtLink>
-              </div>
-
-              <OpsJobPanel
-                v-if="openJob === s.id"
-                :shipment="s"
-                :emails="mailFor(s.id)"
-                @refresh="refreshAll()"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="card ops-inbox">
-            <div class="row spread">
-              <h2>Inbox <span class="pill pill-green">job-tied</span></h2>
-              <button v-if="jobMail.length > 8" class="btn btn-ghost" @click="showAllMail = !showAllMail">
-                {{ showAllMail ? 'Show latest' : `Show all ${jobMail.length}` }}
-              </button>
-            </div>
-            <p class="sub">Every mail already attached to its job — no ticket to open, no thread to hunt for.</p>
-
-            <p v-if="!jobMail.length" class="dash-empty">No job mail yet.</p>
-
-            <div v-for="e in visibleMail" :key="e.id" class="ops-mail">
-              <div class="ops-mail-head" @click="openEmail = openEmail === e.id ? null : e.id">
-                <div class="ops-mail-body">
-                  <div class="row ops-pills">
-                    <span class="pill" :class="mailDirectionOf(e) === 'in' ? 'pill-amber' : 'pill-blue'">
-                      {{ mailDirectionOf(e) === 'in' ? 'In' : 'Out' }}
-                    </span>
-                    <span class="pill pill-gray">{{ kindLabel(e) }}</span>
-                    <button class="ops-joblink" @click.stop="openJobFromMail(e.shipmentId)">{{ e.shipmentId }}</button>
-                  </div>
-                  <div class="subject">{{ e.subject }}</div>
-                  <div class="meta">
-                    From {{ mailFromOf(e) }} · To {{ mailToOf(e) || '—' }} · {{ when(e.at) }}
-                  </div>
-                </div>
-                <span class="muted">{{ openEmail === e.id ? '▲' : '▼' }}</span>
-              </div>
-              <pre v-if="openEmail === e.id">{{ e.body }}</pre>
-            </div>
-
-            <div v-if="noiseMail.length" class="ops-noise">
-              <button class="ops-noise-head" @click="showNoise = !showNoise">
-                <span>Not on a job · {{ noiseMail.length }}</span>
-                <span class="muted">PickleSprout, newsletters, vendors {{ showNoise ? '▲' : '▼' }}</span>
-              </button>
-              <div v-if="showNoise" class="ops-noise-list">
-                <div v-for="e in noiseMail" :key="e.id" class="ops-mail muted-row">
-                  <div class="row ops-pills">
-                    <span class="pill pill-gray">Not freight</span>
-                    <span class="pill pill-amber">In</span>
-                  </div>
-                  <div class="subject">{{ e.subject }}</div>
-                  <div class="meta">From {{ mailFromOf(e) }} · {{ when(e.at) }}</div>
+            <template #route-cell="{ row }">
+              <div class="w-52 max-w-52 text-[12px] leading-tight">
+                <div class="truncate text-zinc-700">{{ row.original.origin }}</div>
+                <div class="truncate text-zinc-500">
+                  <UIcon name="i-lucide-arrow-right" class="size-3 align-[-1px]" />
+                  {{ row.original.destination }}
                 </div>
               </div>
-            </div>
-          </div>
+            </template>
 
-          <RewardsDashboard compact />
-        </div>
+            <template #status-cell="{ row }">
+              <UBadge :color="STATUS_COLOR[row.original.status as 'booked']" variant="subtle" class="whitespace-nowrap">
+                {{ STATUS_LABELS[row.original.status as 'booked'] }}
+              </UBadge>
+            </template>
+
+            <template #docs-cell="{ row }">
+              <template v-if="docsDone(row.original).total">
+                <div class="text-xs font-semibold tabular-nums">
+                  {{ docsDone(row.original).done }}/{{ docsDone(row.original).total }}
+                </div>
+                <UProgress
+                  size="xs"
+                  class="w-14 mt-1"
+                  :model-value="docsDone(row.original).done"
+                  :max="docsDone(row.original).total"
+                  :color="docsDone(row.original).done === docsDone(row.original).total ? 'success' : 'warning'"
+                />
+              </template>
+              <span v-else class="text-xs text-zinc-400">—</span>
+            </template>
+
+            <template #customs-cell="{ row }">
+              <UBadge
+                v-if="customsBadge(row.original)"
+                :color="customsBadge(row.original)!.color"
+                variant="subtle"
+                class="whitespace-nowrap"
+              >
+                {{ customsBadge(row.original)!.label }}
+              </UBadge>
+              <span v-else class="text-xs text-zinc-400">—</span>
+            </template>
+
+            <template #flags-cell="{ row }">
+              <div class="flex flex-wrap gap-1 max-w-[11rem]">
+                <UBadge v-if="hasOpenClaim(row.original)" color="error" variant="subtle" size="sm">
+                  {{ CLAIM_LABELS[row.original.claim.type] }}
+                </UBadge>
+                <UBadge v-if="needsReply(row.original)" color="primary" variant="subtle" size="sm">
+                  Needs reply
+                </UBadge>
+                <UBadge v-if="partnerWait(row.original)" color="warning" variant="subtle" size="sm">
+                  Partner wait
+                </UBadge>
+                <UBadge v-if="etaPassed(row.original)" color="error" variant="subtle" size="sm">
+                  ETA passed
+                </UBadge>
+                <span
+                  v-if="!hasOpenClaim(row.original) && !needsReply(row.original) && !partnerWait(row.original) && !etaPassed(row.original)"
+                  class="text-xs text-zinc-400"
+                >—</span>
+              </div>
+            </template>
+
+            <template #eta-cell="{ row }">
+              <div class="text-xs whitespace-nowrap" :class="etaPassed(row.original) ? 'text-red-600 font-semibold' : 'text-zinc-600'">
+                {{ rel(row.original.eta) }}
+              </div>
+              <div class="text-[11px] text-zinc-400 whitespace-nowrap">{{ fullWhen(row.original.eta) }}</div>
+            </template>
+
+            <template #actions-cell="{ row }">
+              <div class="flex items-center gap-1 justify-end">
+                <UTooltip text="Copy tracking link">
+                  <UButton
+                    icon="i-lucide-link"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    :aria-label="`Copy tracking link for ${row.original.id}`"
+                    @click.stop="copyLink(row.original.id)"
+                  />
+                </UTooltip>
+                <UButton
+                  :to="`/ops/jobs/${row.original.id}`"
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  trailing-icon="i-lucide-chevron-right"
+                >
+                  Open
+                </UButton>
+              </div>
+            </template>
+          </UTable>
+        </UCard>
       </div>
 
-      </main>
-      <div v-if="toast" class="toast">{{ toast }}</div>
+      <!-- new booking -->
+      <USlideover
+        v-model:open="showForm"
+        title="New booking"
+        description="Creates the job and emails the customer their tracking link."
+      >
+        <template #body>
+          <UForm :state="form" :validate="validate" class="space-y-4" @submit="createShipment">
+            <UFormField label="Job type" name="mode">
+              <USelect v-model="form.mode" :items="MODE_ITEMS" class="w-full" />
+            </UFormField>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <UFormField label="Customer name" name="customerName" required>
+                <UInput v-model="form.customerName" placeholder="Daniel Wong" class="w-full" />
+              </UFormField>
+              <UFormField label="Customer email" name="customerEmail" required>
+                <UInput v-model="form.customerEmail" type="email" placeholder="daniel@example.com" class="w-full" />
+              </UFormField>
+
+              <template v-if="form.mode === 'b2b'">
+                <UFormField label="Company" name="company">
+                  <UInput v-model="form.company" placeholder="Allmighty Foods Pte Ltd" class="w-full" />
+                </UFormField>
+                <UFormField label="PO number" name="poNumber">
+                  <UInput v-model="form.poNumber" placeholder="PO-4471" class="w-full" />
+                </UFormField>
+                <UFormField label="Incoterms" name="incoterms">
+                  <USelect v-model="form.incoterms" :items="INCOTERMS" class="w-full" />
+                </UFormField>
+              </template>
+              <template v-else-if="form.mode === 'b2self'">
+                <UFormField label="Brand / company" name="company">
+                  <UInput v-model="form.company" placeholder="Hey Fran" class="w-full" />
+                </UFormField>
+                <UFormField label="Transfer reference" name="poNumber">
+                  <UInput v-model="form.poNumber" placeholder="TRF-0219" class="w-full" />
+                </UFormField>
+              </template>
+
+              <UFormField label="Origin" name="origin" required>
+                <UInput v-model="form.origin" placeholder="Senoko Food Hub, Singapore" class="w-full" />
+              </UFormField>
+              <UFormField label="Destination" name="destination" required>
+                <UInput v-model="form.destination" placeholder="Tuas, Singapore" class="w-full" />
+              </UFormField>
+              <UFormField label="ETA" name="eta">
+                <UInput v-model="form.eta" type="datetime-local" class="w-full" />
+              </UFormField>
+              <UFormField label="Driver" name="driverName">
+                <UInput v-model="form.driverName" placeholder="Hafiz Rahman" class="w-full" />
+              </UFormField>
+              <UFormField label="Driver mobile" name="driverPhone" hint="login">
+                <UInput v-model="form.driverPhone" placeholder="91234567" class="w-full" />
+              </UFormField>
+              <UFormField label="Vehicle" name="vehicle">
+                <UInput v-model="form.vehicle" placeholder="14-ft lorry — GBC 4521 K" class="w-full" />
+              </UFormField>
+              <UFormField label="Pieces" name="pieces">
+                <UInput v-model.number="form.pieces" type="number" min="1" class="w-full" />
+              </UFormField>
+              <UFormField label="Weight (kg)" name="weightKg">
+                <UInput v-model.number="form.weightKg" type="number" min="0" class="w-full" />
+              </UFormField>
+            </div>
+
+            <UFormField label="Cargo description" name="description" required>
+              <UTextarea v-model="form.description" :rows="2" placeholder="Household goods — fragile" class="w-full" />
+            </UFormField>
+
+            <div class="flex gap-2 pt-1">
+              <UButton type="submit" color="primary" :loading="creating" icon="i-lucide-send">
+                Create &amp; send tracking link
+              </UButton>
+              <UButton color="neutral" variant="ghost" @click="showForm = false">Cancel</UButton>
+            </div>
+          </UForm>
+        </template>
+      </USlideover>
     </template>
   </UDashboardPanel>
 </template>
-
-<style>
-/* ── attention strip ── */
-.ops-attn {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin-top: 16px;
-}
-@media (max-width: 1023px) { .ops-attn { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 560px) { .ops-attn { grid-template-columns: repeat(2, 1fr); } }
-.ops-attn .kpi.zero { opacity: 0.55; }
-.ops-attn .kpi.zero:hover { opacity: 1; }
-.ops-attn .kpi .l { line-height: 1.3; }
-
-/* ── job rows ── */
-.ops-job.open { background: #fffaf6; margin: 0 -8px; padding: 0 8px; border-radius: 10px; }
-.ops-job .ops-job-main { flex: 1; min-width: 0; }
-.ops-job .ops-pills { gap: 6px; row-gap: 6px; }
-.ops-more { gap: 8px; padding: 0 0 12px; }
-.ops-more-btn { border: 1px solid var(--line); }
-.pill.ops-pill-red { background: #fee2e2; color: #b91c1c; }
-
-/* ── inbox ── */
-.ops-inbox .ops-mail {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 9px 11px;
-  margin-bottom: 8px;
-  background: #fbfcfe;
-}
-.ops-inbox .ops-mail-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  justify-content: space-between;
-  cursor: pointer;
-}
-.ops-inbox .ops-mail-body { min-width: 0; }
-.ops-inbox .ops-pills { gap: 6px; margin-bottom: 3px; }
-.ops-inbox .subject { font-weight: 600; font-size: 13px; }
-.ops-inbox .meta { font-size: 12px; color: var(--muted); word-break: break-word; }
-.ops-inbox pre {
-  white-space: pre-wrap;
-  font-family: inherit;
-  font-size: 12px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px 11px;
-  margin: 9px 0 0;
-}
-.ops-joblink {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--blue);
-  cursor: pointer;
-  text-decoration: underline;
-}
-.ops-noise { margin-top: 12px; }
-.ops-noise-head {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  border: 1px dashed var(--line);
-  border-radius: 10px;
-  background: #f7f8fa;
-  padding: 9px 12px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--muted);
-  cursor: pointer;
-  text-align: left;
-}
-.ops-noise-list { margin-top: 8px; }
-.ops-inbox .ops-mail.muted-row { background: #f7f8fa; }
-.ops-inbox .ops-mail.muted-row .subject { font-weight: 600; color: var(--muted); }
-
-@media (max-width: 640px) {
-  .ops-job .shipment-row .actions { margin-left: 0; width: 100%; }
-  .ops-job .shipment-row .actions .btn { flex: 1; }
-}
-</style>

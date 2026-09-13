@@ -42,6 +42,7 @@ function print() {
   <div>
     <TopBar role="Quotation" />
     <main class="page">
+      <NuxtLink to="/portal" style="display:inline-block;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; My shipments</NuxtLink>
       <div v-if="error || !quote" class="card">
         <h2>Quotation not found</h2>
       </div>

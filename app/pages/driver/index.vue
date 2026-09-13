@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { STATUS_LABELS, type ShipmentStatus } from '#shared/utils/shipping'
+import { STATUS_LABELS, statusIndex, type ShipmentStatus } from '#shared/utils/shipping'
+
+definePageMeta({ layout: 'driver' })
+useHead({ title: 'Driver — M&P International Freights' })
 
 interface DriverJob {
   id: string
@@ -13,6 +16,12 @@ interface DriverJob {
   weightKg: number
   signedOff: boolean
 }
+
+const DEMO_DRIVERS = [
+  { name: 'Hafiz', phone: '91234567' },
+  { name: 'Suresh', phone: '92345678' },
+  { name: 'Azlan', phone: '93456789' }
+]
 
 const phone = ref('')
 const driverName = ref('')
@@ -33,11 +42,17 @@ async function login() {
     driverName.value = res.driverName
     jobs.value = res.jobs
     localStorage.setItem('mp-driver-phone', digits)
-  } catch (e: any) {
-    loginError.value = e?.data?.statusMessage ?? 'No jobs found for this number.'
+  } catch (e: unknown) {
+    loginError.value =
+      (e as { data?: { statusMessage?: string } })?.data?.statusMessage ?? 'No jobs found for this number.'
   } finally {
     busy.value = false
   }
+}
+
+function quickFill(p: string) {
+  phone.value = p
+  login()
 }
 
 function logout() {
@@ -55,129 +70,155 @@ onMounted(() => {
   }
 })
 
-function pillClass(status: ShipmentStatus): string {
-  if (status === 'delivered') return 'pill-green'
-  if (status === 'out_for_delivery') return 'pill-amber'
-  return 'pill-blue'
+/** Out for delivery first — that is what the driver is doing right now. */
+const RANK: Record<ShipmentStatus, number> = {
+  out_for_delivery: 0,
+  in_transit: 1,
+  picked_up: 2,
+  booked: 3,
+  delivered: 4
+}
+const sorted = computed(() =>
+  [...jobs.value].sort((a, b) => RANK[a.status] - RANK[b.status] || a.eta.localeCompare(b.eta))
+)
+const open = computed(() => sorted.value.filter((j) => j.status !== 'delivered'))
+
+function statusColor(status: ShipmentStatus): 'success' | 'warning' | 'info' | 'neutral' {
+  if (status === 'delivered') return 'success'
+  if (status === 'out_for_delivery') return 'warning'
+  if (status === 'booked') return 'neutral'
+  return 'info'
 }
 
 function fmtEta(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+  return new Date(iso).toLocaleString('en-SG', {
+    timeZone: 'Asia/Singapore',
+    weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit'
   })
 }
 </script>
 
 <template>
-  <div>
-    <TopBar role="Driver portal" />
-    <main class="page">
-      <div v-if="!driverName" class="card login-card">
-        <div class="login-emoji">🚚</div>
-        <h2 class="login-title">Driver login</h2>
-        <p class="sub" style="text-align: center">No password, no app store — just your mobile number.</p>
+  <div class="px-4 pb-10 pt-5">
+    <!-- Login -->
+    <div v-if="!driverName">
+      <div class="text-center">
+        <span class="grid place-items-center mx-auto size-14 rounded-2xl bg-primary-100 text-primary-600">
+          <UIcon name="i-lucide-truck" class="size-7" />
+        </span>
+        <h1 class="mt-3 text-xl font-bold tracking-tight">Driver login</h1>
+        <p class="mt-1 text-sm text-zinc-500">No password, no app store — just your mobile number.</p>
+      </div>
+
+      <UCard class="mt-5" :ui="{ body: 'p-4' }">
         <form @submit.prevent="login">
-          <input
+          <UInput
             v-model="phone"
-            class="phone-input"
+            size="xl"
+            class="w-full"
             type="tel"
             inputmode="numeric"
             autocomplete="tel"
             placeholder="9123 4567"
             autofocus
             aria-label="Mobile number"
+            :ui="{ base: 'text-center text-2xl font-bold tracking-[0.12em] tabular-nums py-4' }"
+            @input="loginError = ''"
           />
-          <p v-if="loginError" class="login-error">{{ loginError }}</p>
-          <button class="btn btn-primary login-btn" type="submit" :disabled="busy">
-            {{ busy ? 'Checking…' : 'View my jobs' }}
-          </button>
+          <p v-if="loginError" class="mt-2 text-center text-sm font-medium text-red-600">{{ loginError }}</p>
+          <UButton
+            type="submit"
+            size="xl"
+            block
+            class="mt-3"
+            icon="i-lucide-list-checks"
+            :loading="busy"
+          >View my jobs</UButton>
         </form>
-        <hr class="divider" />
-        <p class="muted" style="margin: 0; text-align: center; font-size: 12px">
-          Demo drivers: Hafiz <strong>9123 4567</strong> · Suresh <strong>9234 5678</strong> · Azlan <strong>9345 6789</strong>
+
+        <USeparator class="my-4" label="Demo drivers" />
+
+        <div class="flex flex-wrap justify-center gap-2">
+          <UButton
+            v-for="d in DEMO_DRIVERS"
+            :key="d.phone"
+            color="neutral"
+            variant="outline"
+            size="lg"
+            @click="quickFill(d.phone)"
+          >
+            {{ d.name }} · {{ d.phone }}
+          </UButton>
+        </div>
+      </UCard>
+    </div>
+
+    <!-- Today's jobs -->
+    <template v-else>
+      <div class="rounded-2xl bg-[#221F1F] p-5 text-white">
+        <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-primary-400">Today</p>
+        <p class="mt-1 text-2xl font-bold tracking-tight">Hi, {{ driverName }} 👋</p>
+        <p class="mt-1 text-sm text-white/60">
+          {{ open.length }} job{{ open.length === 1 ? '' : 's' }} to run
+          <template v-if="jobs.length - open.length">
+            · {{ jobs.length - open.length }} done
+          </template>
         </p>
       </div>
 
-      <template v-else>
-        <div class="hero-status">
-          <div class="eyebrow">Driver portal</div>
-          <div class="big">Hi, {{ driverName }} 👋</div>
-          <div class="eta">{{ jobs.length }} job{{ jobs.length === 1 ? '' : 's' }} assigned to you</div>
-        </div>
+      <div class="mt-4 space-y-3">
+        <NuxtLink v-for="j in sorted" :key="j.id" :to="`/driver/${j.id}`" class="block">
+          <UCard
+            :ui="{
+              root: j.status === 'out_for_delivery' ? 'ring-primary-300 bg-primary-50/40' : '',
+              body: 'p-4'
+            }"
+          >
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-sm font-bold">{{ j.id }}</span>
+              <UBadge :color="statusColor(j.status)" variant="subtle" size="sm">
+                {{ STATUS_LABELS[j.status] }}
+              </UBadge>
+              <UBadge v-if="j.signedOff" color="success" variant="solid" size="sm" icon="i-lucide-signature">
+                Signed off
+              </UBadge>
+              <UIcon name="i-lucide-chevron-right" class="ms-auto size-5 text-zinc-400" />
+            </div>
 
-        <NuxtLink v-for="j in jobs" :key="j.id" :to="`/driver/${j.id}`" class="card job-card">
-          <div class="row spread">
-            <span class="id" style="font-weight: 700">{{ j.id }}</span>
-            <span class="pill" :class="pillClass(j.status)">{{ STATUS_LABELS[j.status] }}</span>
-          </div>
-          <div style="font-size: 14px; margin-top: 6px">{{ j.origin }} → <strong>{{ j.destination }}</strong></div>
-          <div class="muted">{{ j.description }} · {{ j.pieces }} pcs · {{ j.weightKg }} kg</div>
-          <div class="muted">ETA {{ fmtEta(j.eta) }} · {{ j.vehicle }}</div>
-          <div class="row spread" style="margin-top: 10px">
-            <span v-if="j.signedOff" class="pill pill-green">✅ Signed off</span>
-            <span v-else class="muted">Tap to post updates →</span>
-          </div>
+            <p class="mt-2 text-base font-semibold leading-snug">{{ j.destination }}</p>
+            <p class="text-xs text-zinc-500">from {{ j.origin }}</p>
+
+            <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-600">
+              <span class="inline-flex items-center gap-1 font-semibold">
+                <UIcon name="i-lucide-clock" class="size-3.5 text-primary-500" /> {{ fmtEta(j.eta) }}
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <UIcon name="i-lucide-package" class="size-3.5" /> {{ j.pieces }} pcs · {{ j.weightKg }} kg
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <UIcon name="i-lucide-truck" class="size-3.5" /> {{ j.vehicle }}
+              </span>
+            </div>
+
+            <p class="mt-2 line-clamp-2 text-xs text-zinc-500">{{ j.description }}</p>
+
+            <div class="mt-3">
+              <div class="flex gap-1">
+                <div
+                  v-for="n in 5"
+                  :key="n"
+                  class="h-1.5 flex-1 rounded-full"
+                  :class="n - 1 <= statusIndex(j.status) ? 'bg-primary' : 'bg-zinc-200'"
+                />
+              </div>
+            </div>
+          </UCard>
         </NuxtLink>
+      </div>
 
-        <button class="btn btn-ghost" @click="logout">Log out</button>
-      </template>
-    </main>
+      <UButton class="mt-5" block size="lg" color="neutral" variant="ghost" icon="i-lucide-log-out" @click="logout">
+        Log out
+      </UButton>
+    </template>
   </div>
 </template>
-
-<style scoped>
-.job-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s;
-  padding: 20px 18px;
-}
-.job-card:hover, .job-card:active { border-color: var(--blue); }
-
-.login-card {
-  max-width: 440px;
-  margin: 8vh auto 16px;
-  padding: 28px 22px;
-}
-.login-emoji { font-size: 44px; text-align: center; }
-.login-title { text-align: center; font-size: 22px; margin: 4px 0 2px; }
-
-.phone-input {
-  width: 100%;
-  font-size: 30px;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.12em;
-  padding: 18px 12px;
-  border: 2px solid var(--line);
-  border-radius: 14px;
-  font-variant-numeric: tabular-nums;
-}
-.phone-input:focus {
-  outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 4px var(--blue-soft);
-}
-.phone-input::placeholder { color: #cbd5e1; font-weight: 500; }
-
-.login-btn {
-  width: 100%;
-  margin-top: 14px;
-  padding: 18px;
-  font-size: 18px;
-  border-radius: 14px;
-}
-.login-error {
-  color: #b91c1c;
-  font-size: 14px;
-  text-align: center;
-  margin: 10px 0 0;
-}
-
-/* thumb-sized targets on small screens */
-@media (max-width: 640px) {
-  .login-card { margin-top: 4vh; }
-  .phone-input { font-size: 26px; }
-}
-</style>

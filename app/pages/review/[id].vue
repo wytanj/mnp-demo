@@ -57,6 +57,7 @@ async function submit() {
   <div>
     <TopBar role="Customer review" />
     <main class="page">
+      <NuxtLink to="/portal" style="display:inline-block;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; My shipments</NuxtLink>
       <div v-if="error || !shipment" class="card">
         <h2>Shipment not found</h2>
         <p class="sub">

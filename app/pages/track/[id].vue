@@ -317,6 +317,7 @@ const supportMailto = computed(
   <div>
     <TopBar role="Customer view" />
     <main class="page mid">
+      <NuxtLink to="/portal" style="display:inline-block;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; My shipments</NuxtLink>
       <div v-if="error || !shipment" class="card">
         <h2>Shipment not found</h2>
         <p class="sub">

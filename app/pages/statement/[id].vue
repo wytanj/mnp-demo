@@ -1,36 +1,17 @@
 <script setup lang="ts">
+import type { Shipment } from '#shared/utils/shipping'
+import { findStatement } from '#shared/utils/billing'
+
+/**
+ * Printable statement of account. The numbers come from the job book via
+ * buildStatements() — Billing / SOA and this page never drift apart.
+ */
 const route = useRoute()
-const id = route.params.id as string
+const id = computed(() => String(route.params.id))
 
-const STATEMENTS: Record<string, any> = {
-  '12011': {
-    accountNo: '12011',
-    customer: {
-      name: 'Titan Associates Pte Ltd',
-      address: ['201 Henderson Road', '#07-25 Apex@Henderson', 'Singapore 159545'],
-      tel: '9339 9151'
-    },
-    endedDate: '08/12/2022',
-    preparedBy: 'ROBOT',
-    preparedAt: '12/08/2022 15:05',
-    currency: 'SGD',
-    lines: [
-      { date: '30/11/2022', docType: 'DN', docNo: '20356', remark: 'HYUNDAI DYNASTY/0110S', debit: 289.02, credit: 0, balance: 289.02 },
-      { date: '30/11/2022', docType: 'IV', docNo: '291919', remark: 'HYUNDAI DYNASTY/0110S', debit: 1005.00, credit: 0, balance: 1294.02 }
-    ],
-    aging: [
-      { label: 'Current', amount: 0 },
-      { label: '30 days', amount: 1294.02 },
-      { label: '60 days', amount: 0 },
-      { label: '90 days', amount: 0 },
-      { label: '120 days', amount: 0 },
-      { label: 'Overdue', amount: 0 }
-    ],
-    total: 1294.02
-  }
-}
+const { data: shipments } = await useFetch<Shipment[]>('/api/shipments', { default: () => [] })
 
-const soa = STATEMENTS[id]
+const soa = computed(() => findStatement(shipments.value ?? [], id.value))
 
 function money(n: number): string {
   return n.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -47,9 +28,13 @@ function print() {
   <div>
     <TopBar role="Statement of account" />
     <main class="page">
-      <NuxtLink to="/portal" style="display:inline-block;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; My shipments</NuxtLink>
+      <div style="margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap">
+        <NuxtLink to="/portal" style="font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; My shipments</NuxtLink>
+        <NuxtLink to="/ops/billing" style="font-size:13px;font-weight:700;color:var(--muted);text-decoration:none">&larr; Billing / SOA</NuxtLink>
+      </div>
       <div v-if="!soa" class="card">
         <h2>Statement not found</h2>
+        <p class="muted" style="margin-bottom:0">No account {{ id }} on the job book. <NuxtLink to="/ops/billing">See all statements</NuxtLink>.</p>
       </div>
 
       <template v-else>

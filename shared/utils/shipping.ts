@@ -822,7 +822,7 @@ export function isStuck(s: Shipment, hours = 24): boolean {
 }
 
 /** ETA is in the past and the job is not delivered yet. */
-export function etaPassed(s: Shipment): boolean {
+export function etaPassed(s: Pick<Shipment, 'status' | 'eta'>): boolean {
   if (s.status === 'delivered') return false
   return new Date(s.eta).getTime() < Date.now()
 }

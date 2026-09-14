@@ -6,6 +6,8 @@ export default defineNuxtConfig({
   // dark locally via a `dark` class so it reads charcoal.
   colorMode: { preference: 'light', fallback: 'light' },
   css: ['~/assets/css/main.css'],
+  // Felicia set Functions region = Singapore in the Vercel dashboard on 2026-09-14; this pins it so a deploy cannot drift back to iad1.
+  nitro: { vercel: { functions: { regions: ['sin1'] } } },
   app: {
     head: {
       title: 'M&P International Freights — Live Tracking Demo',

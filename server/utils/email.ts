@@ -51,6 +51,8 @@ export async function sendEmail(e: OutboxEmail): Promise<void> {
   }
   // Demo safety: seed addresses aren't real — RESEND_TO reroutes all mail
   const to = process.env.RESEND_TO || e.to
+  // Verified sending domain for the Resend API call only. What the customer
+  // and the UI see is MAIL_FROM_DISPLAY (cs@mp.com.sg) — see shared/utils/shipping.ts.
   const from = process.env.RESEND_FROM || 'M&P International Freights <tracking@pickletour.app>'
   try {
     const res = await fetch('https://api.resend.com/emails', {

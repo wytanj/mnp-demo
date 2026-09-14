@@ -1,5 +1,5 @@
 import type { Shipment } from '#shared/utils/shipping'
-import { STATUS_LABELS } from '#shared/utils/shipping'
+import { MAIL_FROM_DISPLAY, STATUS_LABELS } from '#shared/utils/shipping'
 
 // Resend `email.received` webhook → AI-drafted CS reply, sent back via Resend
 // and logged on the shipment timeline + outbox.
@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
   const email = {
     id: crypto.randomUUID(),
     shipmentId: shipment?.id ?? '',
-    from: 'M&P International Freights <tracking@pickletour.app>',
+    from: MAIL_FROM_DISPLAY,
     to: from,
     direction: 'out' as const,
     kind: 'reply' as const,
@@ -152,9 +152,10 @@ export default defineEventHandler(async (event) => {
     addEvent(shipment, {
       type: 'note',
       actor: 'cs',
-      note: `📩 ${from} wrote in${matchedBy === 'shipment-id' ? ' quoting this job' : matchedBy === 'company-domain' ? ' from the company domain' : ''}${who}`
+      note: `📩 ${from} wrote in${matchedBy === 'shipment-id' ? ' quoting this job' : matchedBy === 'company-domain' ? ' from the company domain' : ''}${who}`,
+      internal: true
     })
-    addEvent(shipment, { type: 'note', actor: 'cs', note: `🤖 AI auto-replied to "${subject}"` })
+    addEvent(shipment, { type: 'note', actor: 'cs', note: `🤖 AI auto-replied to "${subject}"`, internal: true })
     await dbSaveShipment(shipment)
   }
 

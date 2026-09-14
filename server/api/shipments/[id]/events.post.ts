@@ -44,6 +44,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Unknown event type' })
   }
 
+  if (type === 'status' && body.status === 'delivered') {
+    await maybeSendReviewAsk(shipment, 'delivered')
+  }
+
   await dbSaveShipment(shipment)
   return created
 })

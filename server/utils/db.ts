@@ -4,7 +4,11 @@ import type { OutboxEmail, Shipment } from '#shared/utils/shipping'
 // per-instance storage when SUPABASE_URL / SUPABASE_ANON_KEY are absent.
 
 interface MemStore { shipments: Map<string, Shipment>; emails: OutboxEmail[] }
-const g = globalThis as unknown as { __memStore?: MemStore }
+const g = globalThis as unknown as {
+  __memStore?: MemStore
+  __seedKnown?: boolean
+  __seedPromise?: Promise<void>
+}
 
 function supaCfg(): { url: string; key: string } | null {
   const url = process.env.SUPABASE_URL
@@ -39,9 +43,16 @@ function mem(): MemStore {
   return g.__memStore
 }
 
-// Checked on every access (cheap 1-row query) so a manual table wipe
-// reseeds immediately — warm serverless instances hold no stale flag.
-async function ensureSeeded(): Promise<void> {
+// The 1-row probe used to run on every read — ~1 extra Supabase round-trip per
+// request from sin1. Now it runs once per isolate: `g.__seedKnown` latches as
+// soon as a non-empty table is seen (or we have just seeded it) and every later
+// read skips the probe. A manual table wipe is still picked up, because
+// dbGetShipments() clears the latch when its select comes back empty and
+// reseeds — see there. Readers of a single row / of emails deliberately do not
+// self-heal: a 404 must not cost a probe. Concurrent cold reads (the jobs feed
+// Promise.all's shipments + emails) share one in-flight probe via
+// `g.__seedPromise`, so a cold isolate seeds once, not once per reader.
+async function seedProbe(): Promise<void> {
   const rows = await supa<{ id: string }[]>('shipments?select=id&limit=1')
   if (!rows.length) {
     const seed = buildSeedData()
@@ -58,12 +69,28 @@ async function ensureSeeded(): Promise<void> {
       })
     }
   }
+  g.__seedKnown = true
+}
+
+async function ensureSeeded(): Promise<void> {
+  if (g.__seedKnown) return
+  // A rejected probe clears the slot in the finally, so the next read retries.
+  g.__seedPromise ??= seedProbe().finally(() => {
+    g.__seedPromise = undefined
+  })
+  await g.__seedPromise
 }
 
 export async function dbGetShipments(): Promise<Shipment[]> {
   if (!supaCfg()) return [...mem().shipments.values()]
   await ensureSeeded()
-  const rows = await supa<{ data: Shipment }[]>('shipments?select=data')
+  let rows = await supa<{ data: Shipment }[]>('shipments?select=data')
+  if (!rows.length) {
+    // Table was wiped under a warm isolate — drop the latch, reseed, re-query once.
+    g.__seedKnown = false
+    await ensureSeeded()
+    rows = await supa<{ data: Shipment }[]>('shipments?select=data')
+  }
   return rows.map((r) => r.data)
 }
 

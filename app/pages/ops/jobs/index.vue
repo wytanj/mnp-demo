@@ -2,34 +2,25 @@
 import {
   CLAIM_LABELS,
   CUSTOMS_LABELS,
-  declarationGaps,
-  docsDone,
   etaPassed,
   MODE_LABELS,
   STATUS_LABELS,
-  type CommsThread,
   type Shipment,
   type ShipmentStatus
 } from '#shared/utils/shipping'
+import type { JobSummary } from '#shared/utils/jobs'
 
 definePageMeta({ layout: 'ops' })
 
 const toast = useToast()
 
-const { data: shipments, refresh: refreshShipments } = await useFetch<Shipment[]>('/api/shipments', {
-  default: () => [] as Shipment[]
+const { data: jobs, refresh } = await useFetch<JobSummary[]>('/api/ops/jobs', {
+  default: () => [] as JobSummary[]
 })
-const { data: threads, refresh: refreshThreads } = await useFetch<CommsThread[]>('/api/comms', {
-  default: () => [] as CommsThread[]
-})
-
-async function refreshAll() {
-  await Promise.all([refreshShipments(), refreshThreads()])
-}
 
 let timer: ReturnType<typeof setInterval>
 onMounted(() => {
-  timer = setInterval(refreshAll, 5000)
+  timer = setInterval(refresh, 5000)
 })
 onUnmounted(() => clearInterval(timer))
 
@@ -37,38 +28,28 @@ onUnmounted(() => clearInterval(timer))
 
 type AttnKey = 'claims' | 'customs_gaps' | 'ready_decl' | 'signoff' | 'needs_reply'
 
-const needsReplyIds = computed(() => {
-  const set = new Set<string>()
-  for (const t of threads.value ?? []) {
-    if (t.status === 'needs_reply' && t.shipmentId) set.add(t.shipmentId)
-  }
-  return set
-})
-
-function hasOpenClaim(s: Shipment) {
+function hasOpenClaim(s: JobSummary) {
   return s.claim?.status === 'open'
 }
-function customsGaps(s: Shipment): string[] {
-  if (!s.customs) return []
-  if (s.customs.status === 'declared' || s.customs.status === 'cleared') return []
-  return declarationGaps(s)
+function hasCustomsGaps(s: JobSummary) {
+  return (s.customs?.gapCount ?? 0) > 0
 }
-function readyForDeclaration(s: Shipment) {
+function readyForDeclaration(s: JobSummary) {
   return s.customs?.status === 'ready_for_declaration'
 }
-function awaitingSignoff(s: Shipment) {
-  return !s.signoff && (s.status === 'out_for_delivery' || s.status === 'delivered')
+function awaitingSignoff(s: JobSummary) {
+  return !s.signedOff && (s.status === 'out_for_delivery' || s.status === 'delivered')
 }
-function needsReply(s: Shipment) {
-  return needsReplyIds.value.has(s.id)
+function needsReply(s: JobSummary) {
+  return s.needsReply
 }
-function partnerWait(s: Shipment) {
-  return (s.partners ?? []).some((p) => p.state === 'waiting' || p.state === 'blocked')
+function partnerWait(s: JobSummary) {
+  return s.partnerWait
 }
 
-const MATCH: Record<AttnKey, (s: Shipment) => boolean> = {
+const MATCH: Record<AttnKey, (s: JobSummary) => boolean> = {
   claims: hasOpenClaim,
-  customs_gaps: (s) => customsGaps(s).length > 0,
+  customs_gaps: hasCustomsGaps,
   ready_decl: readyForDeclaration,
   signoff: awaitingSignoff,
   needs_reply: needsReply
@@ -86,21 +67,21 @@ const filter = ref<AttnKey | null>(null)
 const search = ref('')
 
 const tiles = computed(() =>
-  TILES.map((t) => ({ ...t, n: (shipments.value ?? []).filter(MATCH[t.key]).length }))
+  TILES.map((t) => ({ ...t, n: (jobs.value ?? []).filter(MATCH[t.key]).length }))
 )
 
 function toggleFilter(key: AttnKey) {
   filter.value = filter.value === key ? null : key
 }
 
-function clientLine(s: Shipment) {
+function clientLine(s: JobSummary) {
   return s.mode === 'b2c' ? s.customerName : (s.company ?? s.customerName)
 }
 
 /** Attention first: claims, then customs, then sign-off, then live jobs, then done. */
-function attentionRank(s: Shipment): number {
+function attentionRank(s: JobSummary): number {
   if (hasOpenClaim(s)) return 0
-  if (customsGaps(s).length || readyForDeclaration(s)) return 1
+  if (hasCustomsGaps(s) || readyForDeclaration(s)) return 1
   if (needsReply(s)) return 2
   if (awaitingSignoff(s)) return 3
   if (s.status !== 'delivered' && s.customs) return 4
@@ -110,7 +91,7 @@ function attentionRank(s: Shipment): number {
 
 const rows = computed(() => {
   const q = search.value.trim().toLowerCase()
-  let list = [...(shipments.value ?? [])]
+  let list = [...(jobs.value ?? [])]
   if (filter.value) list = list.filter(MATCH[filter.value])
   if (q) {
     list = list.filter((s) =>
@@ -144,7 +125,7 @@ const STATUS_COLOR: Record<ShipmentStatus, 'success' | 'warning' | 'info' | 'neu
   delivered: 'success'
 }
 
-function customsBadge(s: Shipment): { label: string; color: 'success' | 'warning' | 'info' } | null {
+function customsBadge(s: JobSummary): { label: string; color: 'success' | 'warning' | 'info' } | null {
   const c = s.customs
   if (!c) return null
   if (c.status === 'docs_pending') return { label: CUSTOMS_LABELS.docs_pending, color: 'warning' }
@@ -235,7 +216,7 @@ async function createShipment() {
       origin: '', destination: '', eta: '', driverName: '', driverPhone: '', vehicle: '',
       pieces: 1, weightKg: 10, description: ''
     })
-    await refreshAll()
+    await refresh()
     toast.add({
       title: `Booking ${created?.id ?? ''} created`,
       description: 'Tracking email sent to the customer.',
@@ -380,16 +361,16 @@ async function createShipment() {
             </template>
 
             <template #docs-cell="{ row }">
-              <template v-if="docsDone(row.original).total">
+              <template v-if="row.original.docs.total">
                 <div class="text-xs font-semibold tabular-nums">
-                  {{ docsDone(row.original).done }}/{{ docsDone(row.original).total }}
+                  {{ row.original.docs.done }}/{{ row.original.docs.total }}
                 </div>
                 <UProgress
                   size="xs"
                   class="w-14 mt-1"
-                  :model-value="docsDone(row.original).done"
-                  :max="docsDone(row.original).total"
-                  :color="docsDone(row.original).done === docsDone(row.original).total ? 'success' : 'warning'"
+                  :model-value="row.original.docs.done"
+                  :max="row.original.docs.total"
+                  :color="row.original.docs.done === row.original.docs.total ? 'success' : 'warning'"
                 />
               </template>
               <span v-else class="text-xs text-zinc-400">—</span>

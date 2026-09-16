@@ -64,8 +64,8 @@ const doors = [
         to="/proposal"
         class="mt-8 inline-flex items-center gap-2 self-center text-sm text-white/55 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F17421] rounded-md px-1"
       >
-        <UIcon name="i-lucide-file-text" class="size-4" />
-        Read the written proposal
+        <UIcon name="i-lucide-presentation" class="size-4" />
+        A walk through the demo
       </NuxtLink>
     </main>
   </div>

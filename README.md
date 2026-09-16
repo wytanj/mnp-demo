@@ -90,6 +90,24 @@ npm run build   # production build
 
 Deployed demo: https://mnp-flow.vercel.app
 
+## Proposal deck
+
+`/proposal` is a visual walkthrough of this demo for someone who will not have
+time to click through it: one headline, one picture or drawing, and at most
+three numbered captions per slide. Deep-link a slide with `?slide=<id>`.
+
+- Copy lives in one place, `app/utils/proposal.ts` — captions, drawing labels
+  and alt text included.
+- `node scripts/check-proposal-copy.mjs` is the gate: banned vocabulary (the
+  customer's current software is never named), headline ≤ 10 words, ≤ 3
+  captions of ≤ 25 words, under 60 body words per slide, and one caption per
+  badge on a picture.
+- The pictures come from the demo itself. Regenerate them with
+  `node scripts/capture-proposal-shots.mjs` — it builds, serves on port 3200
+  with the in-memory seed, drives the installed Chrome and rewrites
+  `public/proposal/*.png`. Add `--proof` to also shoot the deck into
+  `.local/proof/` (not committed).
+
 ## Reseed
 
 - **Local dev is in memory.** No database, no setup — the seed rebuilds on every

@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { PROPOSAL_SLIDES, slideIndexById } from '~/utils/proposal'
 
+/**
+ * /proposal — a visual walkthrough of the M&P Flow demo.
+ *
+ * One headline, one big picture, at most three numbered captions. The badges
+ * over a screenshot are positioned in percent of the picture box, so the box
+ * must keep the 16:10 shape the capture script shoots at (1440×900).
+ *
+ * All copy lives in `~/utils/proposal`; this file only lays it out.
+ */
 definePageMeta({ layout: 'default' })
-useHead({ title: 'M&P Flow — written proposal' })
+useHead({ title: 'M&P Flow — a walk through the demo' })
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +22,12 @@ const current = computed(() => PROPOSAL_SLIDES[index.value]!)
 const isDark = computed(() => current.value.tone === 'dark')
 const isFirst = computed(() => index.value === 0)
 const isLast = computed(() => index.value === total - 1)
+const captions = computed(() => current.value.captions ?? [])
+
+/** Captions read as one row across when there are two or three of them. */
+const captionCols = computed(() =>
+  captions.value.length >= 3 ? 'sm:grid-cols-3' : captions.value.length === 2 ? 'sm:grid-cols-2' : ''
+)
 
 function goTo(i: number) {
   const target = Math.min(Math.max(i, 0), total - 1)
@@ -60,7 +75,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </span>
       <span class="leading-tight min-w-0">
         <span class="block text-sm font-bold tracking-tight truncate">M&amp;P International Freights</span>
-        <span class="block text-sm font-semibold uppercase tracking-[0.14em] text-[#F17421]">Written proposal</span>
+        <span class="block text-sm font-semibold uppercase tracking-[0.14em] text-[#F17421]">A walk through the demo</span>
       </span>
       <a
         href="https://mnp-flow.vercel.app"
@@ -75,10 +90,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
     <main
       ref="mainEl"
-      class="flex-1 min-h-0 overflow-y-auto flex flex-col px-4 sm:px-6 py-8 sm:py-12"
+      class="flex-1 min-h-0 overflow-y-auto flex flex-col px-4 sm:px-6 py-4 sm:py-6"
       :class="isDark ? 'bg-[#221F1F]' : 'bg-[#f0f1f3]'"
     >
-      <div class="w-full max-w-3xl mx-auto my-auto">
+      <div class="w-full max-w-5xl mx-auto my-auto">
         <Transition
           mode="out-in"
           enter-active-class="transition-opacity duration-200 ease-out"
@@ -89,12 +104,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <article
             :key="current.id"
             aria-labelledby="slide-title"
-            class="rounded-2xl px-5 py-8 sm:px-10 sm:py-12"
-            :class="isDark ? 'text-white' : 'bg-white border border-zinc-200 shadow-sm'"
+            :class="isDark ? 'text-white text-center py-10' : 'text-zinc-900'"
           >
             <p
               v-if="current.kicker"
-              class="mb-3 text-sm font-bold uppercase tracking-[0.14em]"
+              class="mb-2 text-sm font-bold uppercase tracking-[0.14em]"
               :class="isDark ? 'text-[#F17421]' : 'text-brand-700'"
             >
               {{ current.kicker }}
@@ -102,73 +116,131 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
             <h1
               id="slide-title"
-              class="text-3xl sm:text-5xl font-bold tracking-tight text-balance"
-              :class="isDark ? 'text-white' : 'text-zinc-900'"
+              class="font-bold tracking-tight text-balance"
+              :class="isDark ? 'text-white text-4xl sm:text-6xl' : 'text-zinc-900 text-2xl sm:text-4xl'"
             >
               {{ current.title }}
             </h1>
 
             <p
               v-if="current.lead"
-              class="mt-4 text-xl sm:text-2xl leading-relaxed"
-              :class="isDark ? 'text-white/80' : 'text-zinc-600'"
+              class="mt-3 text-balance"
+              :class="isDark ? 'text-white/80 text-xl sm:text-2xl' : 'text-zinc-600 text-lg sm:text-xl'"
             >
               {{ current.lead }}
             </p>
 
-            <div
-              v-if="current.blocks.length"
-              class="mt-8 space-y-6 text-lg sm:text-xl leading-relaxed"
-              :class="isDark ? 'text-white/85' : 'text-zinc-700'"
+            <!-- ── the one big picture ─────────────────────────── -->
+
+            <!-- A screenshot of the running demo, with numbered badges over it. -->
+            <figure
+              v-if="current.visual.kind === 'shot'"
+              class="mt-4 mx-auto w-[min(100%,86svh)]"
             >
-              <template v-for="(block, i) in current.blocks" :key="i">
-                <p v-if="block.kind === 'paragraph'">{{ block.text }}</p>
-
-                <ul v-else-if="block.kind === 'bullets'" class="list-disc pl-6 space-y-2.5">
-                  <li v-for="(item, j) in block.items" :key="j">{{ item }}</li>
-                </ul>
-
-                <ol v-else-if="block.kind === 'steps'" class="space-y-4">
-                  <li v-for="(item, j) in block.items" :key="j" class="flex gap-4">
-                    <span
-                      class="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full text-base font-bold"
-                      :class="isDark ? 'bg-[#F17421]/25 text-[#F17421]' : 'bg-brand-100 text-brand-700'"
-                    >
-                      {{ j + 1 }}
-                    </span>
-                    <span class="min-w-0">{{ item }}</span>
-                  </li>
-                </ol>
-
-                <div
-                  v-else-if="block.kind === 'callout'"
-                  class="rounded-xl bg-brand-50 border border-brand-200 px-5 py-4 text-zinc-800"
+              <div class="relative aspect-[16/10] overflow-hidden rounded-xl border border-zinc-300 bg-white shadow-sm">
+                <img
+                  :src="current.visual.src"
+                  :alt="current.visual.alt"
+                  width="1440"
+                  height="900"
+                  class="absolute inset-0 h-full w-full object-cover"
                 >
-                  <p v-if="block.title" class="font-bold">{{ block.title }}</p>
-                  <p :class="block.title ? 'mt-1.5' : undefined">{{ block.text }}</p>
-                </div>
+                <span
+                  v-for="mark in current.visual.marks ?? []"
+                  :key="mark.n"
+                  aria-hidden="true"
+                  class="absolute grid size-7 sm:size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#F17421] text-sm sm:text-base font-bold text-white ring-2 ring-white shadow-lg"
+                  :style="{ left: `${mark.x}%`, top: `${mark.y}%` }"
+                >
+                  {{ mark.n }}
+                </span>
+              </div>
+            </figure>
 
-                <div v-else-if="block.kind === 'link'">
-                  <UButton
-                    :to="block.href"
-                    target="_blank"
-                    rel="noopener"
-                    size="xl"
-                    color="primary"
-                    trailing-icon="i-lucide-external-link"
-                  >
-                    {{ block.label }}
-                  </UButton>
-                  <p
-                    v-if="block.note"
-                    class="mt-3 text-base"
-                    :class="isDark ? 'text-white/70' : 'text-zinc-600'"
-                  >
-                    {{ block.note }}
-                  </p>
-                </div>
-              </template>
+            <!-- A drawing, in the brand colours. -->
+            <figure
+              v-else-if="current.visual.kind === 'diagram'"
+              class="mt-4 mx-auto w-[min(100%,92svh)]"
+            >
+              <ProposalDiagram :diagram="current.visual" />
+            </figure>
+
+            <!-- The trial, as a strip of numbered steps. -->
+            <div v-else-if="current.visual.kind === 'strip'" class="relative mt-6">
+              <!-- The rule the numbers sit on, so five cards read as one run. -->
+              <div
+                aria-hidden="true"
+                class="hidden sm:block absolute left-[10%] right-[10%] top-[38px] h-0.5 bg-[#F17421]/30"
+              />
+              <ol class="relative grid gap-3 sm:grid-cols-5">
+                <li
+                  v-for="(step, i) in current.visual.steps"
+                  :key="i"
+                  class="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:flex-col sm:text-center"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-full bg-[#F17421] text-base font-bold text-white">
+                    {{ i + 1 }}
+                  </span>
+                  <span class="text-base font-semibold leading-snug text-zinc-800 sm:mt-1">{{ step.label }}</span>
+                </li>
+              </ol>
             </div>
+
+            <!-- The asks, as numbered cards. -->
+            <ol
+              v-else-if="current.visual.kind === 'asks'"
+              class="mt-6 grid gap-4 sm:grid-cols-2"
+            >
+              <li
+                v-for="(item, i) in current.visual.items"
+                :key="i"
+                class="flex items-start gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
+              >
+                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-lg font-bold text-brand-700">
+                  {{ i + 1 }}
+                </span>
+                <span class="text-lg font-semibold leading-snug text-zinc-800">{{ item }}</span>
+              </li>
+            </ol>
+
+            <!-- A way out to the live demo. -->
+            <div v-else-if="current.visual.kind === 'link'" class="mt-6 text-center">
+              <UButton
+                :to="current.visual.href"
+                target="_blank"
+                rel="noopener"
+                size="xl"
+                color="primary"
+                trailing-icon="i-lucide-external-link"
+              >
+                {{ current.visual.label }}
+              </UButton>
+              <p class="mt-3 text-base text-zinc-600">{{ current.visual.note }}</p>
+            </div>
+
+            <!-- ── the captions that read the picture ──────────── -->
+            <ol
+              v-if="captions.length"
+              class="mt-6 grid gap-x-6 gap-y-4"
+              :class="captionCols"
+            >
+              <li v-for="caption in captions" :key="caption.n" class="flex gap-3">
+                <span
+                  class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-[#F17421] text-sm font-bold text-white"
+                >
+                  {{ caption.n }}
+                </span>
+                <span class="text-base sm:text-lg leading-snug text-zinc-700">{{ caption.text }}</span>
+              </li>
+            </ol>
+
+            <p
+              v-if="current.note"
+              class="mt-6 text-base"
+              :class="isDark ? 'text-white/60' : 'text-zinc-500'"
+            >
+              {{ current.note }}
+            </p>
           </article>
         </Transition>
       </div>
@@ -182,9 +254,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         />
       </div>
 
-      <div class="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 sm:px-6 py-3 sm:py-4">
+      <div class="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 sm:px-6 py-3">
         <UButton
-          size="xl"
+          size="lg"
           variant="outline"
           color="neutral"
           icon="i-lucide-arrow-left"
@@ -203,15 +275,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </span>
 
         <UButton
-          size="xl"
+          size="lg"
           color="primary"
           trailing-icon="i-lucide-arrow-right"
           :disabled="isLast"
-          :aria-label="isLast ? 'End of proposal' : 'Next slide'"
+          :aria-label="isLast ? 'End of the walkthrough' : 'Next slide'"
           @click="go(1)"
         >
           <span class="sm:hidden">{{ isLast ? 'End' : 'Next' }}</span>
-          <span class="hidden sm:inline">{{ isLast ? 'End of proposal' : 'Next' }}</span>
+          <span class="hidden sm:inline">{{ isLast ? 'End of the walkthrough' : 'Next' }}</span>
         </UButton>
       </div>
     </footer>

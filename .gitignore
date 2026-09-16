@@ -8,3 +8,6 @@ dist
 
 .vercel
 .env*
+
+# Review screenshots from scripts/capture-proposal-shots.mjs --proof
+.local

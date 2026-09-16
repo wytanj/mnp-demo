@@ -36,7 +36,7 @@ const doors = [
       <DemoHowTo page="doors" tone="dark" class="ms-auto" />
     </header>
 
-    <main class="flex-1 flex items-center px-6 sm:px-10 py-10">
+    <main class="flex-1 flex flex-col justify-center px-6 sm:px-10 py-10">
       <div class="w-full max-w-6xl mx-auto grid gap-5 sm:gap-6 grid-cols-1 md:grid-cols-3">
         <NuxtLink
           v-for="d in doors"
@@ -60,6 +60,13 @@ const doors = [
           </span>
         </NuxtLink>
       </div>
+      <NuxtLink
+        to="/proposal"
+        class="mt-8 inline-flex items-center gap-2 self-center text-sm text-white/55 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F17421] rounded-md px-1"
+      >
+        <UIcon name="i-lucide-file-text" class="size-4" />
+        Read the written proposal
+      </NuxtLink>
     </main>
   </div>
 </template>
